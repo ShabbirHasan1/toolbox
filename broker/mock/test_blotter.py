@@ -25,11 +25,6 @@ from zipline.finance.execution import (
     StopOrder,
 )
 
-from .execution import (
-    BracketOrder,
-    LimitBracketOrder
-)
-
 from zipline.gens.sim_engine import SESSION_END, BAR
 from zipline.finance.cancel_policy import EODCancel, NeverCancel
 from zipline.finance.slippage import (
@@ -76,18 +71,13 @@ class BlotterTestCase(WithLogger,
             index=cls.sim_params.sessions,
         )
 
-    @parameterized.expand([(MarketOrder(), None, None, None, None),
-                           (BracketOrder(12, 17), None, None, 12, 17),
-                           (BracketOrder(None, 17.3), None, None, None, 17.3),
-                           (LimitBracketOrder(10, 8, 12), None, 10, 8, 12),
-                           (LimitOrder(10), None, None, 10, None),
-                           (StopOrder(10), None, None, None, 10),
+    @parameterized.expand([(MarketOrder(), None, None),
+                           (LimitOrder(10), 10, None),
+                           (StopOrder(10), None, 10),
                            (StopLimitOrder(10, 20), 10, 20)])
     def test_blotter_order_types(self, style_obj,
                                  expected_lmt,
-                                 expected_stp,
-                                 expected_tp,
-                                 expected_sl):
+                                 expected_stp):
 
         blotter = Blotter('daily', self.env.asset_finder)
 
@@ -235,6 +225,7 @@ class BlotterTestCase(WithLogger,
             self.data_portal,
             lambda: self.sim_params.sessions[-1],
             self.sim_params.data_frequency,
+            None
         )
         txns, _, closed_orders = blotter.get_transactions(bar_data)
         for txn in txns:
@@ -310,6 +301,7 @@ class BlotterTestCase(WithLogger,
                 self.data_portal,
                 lambda: dt,
                 self.sim_params.data_frequency,
+                None
             )
             txns, _, _ = blotter.get_transactions(bar_data)
             for txn in txns:
