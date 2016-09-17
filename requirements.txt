@@ -1,1 +1,5 @@
 pytest
+nose_parameterized
+nose
+pandas==0.18.1
+zipline==1.0.2
