@@ -1,2 +1,5 @@
+import random
+
+
 def trial():
-    print("This is a 'Success' event")
+    return random.randint(0, 1)
