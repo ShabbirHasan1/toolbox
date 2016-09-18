@@ -29,7 +29,7 @@ log = Logger('Blotter')
 warning_logger = Logger('AlgoWarning')
 
 
-class Blotter(object):
+class BracketBlotter(object):
     def __init__(self, data_frequency, asset_finder, slippage_func=None,
                  commission=None, cancel_policy=None):
         # these orders are aggregated by sid
