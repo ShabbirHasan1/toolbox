@@ -2,6 +2,7 @@ from .blotter import BracketBlotter
 from .execution import (
         BracketedLimitOrder,
         BracketedStopOrder,
+        BracketedStopLimitOrder,
         BracketedMarketOrder
 )
 from zipline.finance.execution import (
@@ -94,6 +95,8 @@ class Client(BracketBlotter):
             else:
                 return MarketOrder()
         else:
+            if limit_price and stop_price:
+                return BracketedStopLimitOrder(stop_price, limit_price, stop_loss, take_profit)
             if limit_price:
                 return BracketedLimitOrder(limit_price, stop_loss, take_profit)
             if stop_price:

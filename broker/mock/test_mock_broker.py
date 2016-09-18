@@ -4,6 +4,7 @@ from .mock_broker import Client
 from .execution import (
         BracketedLimitOrder,
         BracketedStopOrder,
+        BracketedStopLimitOrder,
         BracketedMarketOrder
 )
 from zipline.finance.execution import (
@@ -28,9 +29,9 @@ def test__convert_order_params_for_blotter(client):
 
     assert client.convert_order_params_for_blotter(1, 2, None, None).__class__ == StopLimitOrder
 
-    assert client.convert_order_params_for_blotter(1, 2, 3, None).__class__ == BracketedLimitOrder
+    assert client.convert_order_params_for_blotter(1, 2, 3, None).__class__ == BracketedStopLimitOrder
 
-    assert client.convert_order_params_for_blotter(1, 2, 3, 4).__class__ == BracketedLimitOrder
+    assert client.convert_order_params_for_blotter(1, 2, 3, 4).__class__ == BracketedStopLimitOrder
 
     assert client.convert_order_params_for_blotter(None, 2, 3, 4).__class__ == BracketedStopOrder
 
