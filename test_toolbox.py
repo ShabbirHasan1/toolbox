@@ -43,14 +43,18 @@ class ToolboxTestCase(WithDataPortal,
                                              take_profit=198,
                                              stop_loss=302)   # filled, remain open
 
-                context.blotter.create_order(c, -100, limit=200,
-                                             take_profit=188,
-                                             stop_loss=212)   # filled, early closed
+                context.blotter.create_order(c, 100, limit=200,
+                                             take_profit=232,
+                                             stop_loss=132)   # filled, early closed
 
-            if data[c].price == 205:
-                context.blotter.create_order(c, 100, limit=206,
-                                             take_profit=212,
-                                             stop_loss=188)   # closes earlier bracket order
+                context.blotter.create_order(c, 100, limit=220,
+                                             take_profit=235,
+                                             stop_loss=135)   # filled, early closed
+
+            if data[c].price == 222:
+                context.blotter.create_order(c, -50,
+                                             take_profit=112,
+                                             stop_loss=288)   # closes earlier bracket order
 
         def analyze(context, perf):
             assert len(context.blotter.open_orders[symbol('A')]) == 0
@@ -64,6 +68,10 @@ class ToolboxTestCase(WithDataPortal,
             assert len(context.blotter.loss_orders[symbol('A')]) == 0
             assert len(context.blotter.loss_orders[symbol('B')]) == 1
             assert len(context.blotter.loss_orders[symbol('C')]) == 0
+
+            """ should have 50 profit at 222,
+            50 tp at 232,
+            100 tp at 235 for 'C' """
 
         algo = TradingAlgorithm(initialize=initialize,
                                 handle_data=handle_data,
