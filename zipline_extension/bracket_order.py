@@ -3,11 +3,11 @@ from zipline.finance.order import Order
 
 class BracketOrder(Order):
     __slots__ = ["sl_order", "tp_order", "take_profit", "stop_loss",
-                 "base_order_id", "txn_price", "trailling"] + Order.__slots__
+                 "base_order_id", "other_bracket_id", "txn_price", "trailling"] + Order.__slots__
 
     def __init__(self, dt, sid, amount, stop=None, limit=None, base_order_id=None,
                  take_profit=None, stop_loss=None, trailling=None, filled=0,
-                 commission=0, id=None, tp_order_id=None, sl_order_id=None):
+                 commission=0, id=None):
         Order.__init__(self, dt, sid, amount, stop, limit, filled,
                        commission, id)
         self.stop_loss = stop_loss
@@ -15,6 +15,7 @@ class BracketOrder(Order):
         self.sl_order, self.tp_order = None, None
         self.trailling = trailling
         self.base_order_id = base_order_id
+        self.other_bracket_id = None
         self.txn_price = None
 
     def open_bracket(self, amount, price, dt):
@@ -44,6 +45,7 @@ class BracketOrder(Order):
                                          limit=self.take_profit,
                                          id=self.id + '_tp',
                                          base_order_id=self.id)
+            self.tp_order.reason = "Take profit"
 
         if amount and self.stop_loss:
             self.sl_order = BracketOrder(dt, self.sid,
@@ -51,6 +53,12 @@ class BracketOrder(Order):
                                          stop=self.stop_loss,
                                          id=self.id + '_sl',
                                          base_order_id=self.id)
+            self.sl_order.reason = "Stop loss"
+
+        if self.tp_order and self.sl_order:
+            self.tp_order.other_bracket_id = self.sl_order.id
+            self.sl_order.other_bracket_id = self.tp_order.id
+
         return self.tp_order, self.sl_order
 
     def partially_cancel(self, amount):

@@ -19,6 +19,8 @@ from logbook import Logger
 from zipline.finance.blotter import Blotter
 
 from .bracket_order import BracketOrder
+from collections import defaultdict
+import pytest
 
 log = Logger('Blotter')
 warning_logger = Logger('AlgoWarning')
@@ -29,6 +31,8 @@ class BracketBlotter(Blotter):
                  commission=None, cancel_policy=None):
         Blotter.__init__(self, data_frequency, asset_finder, slippage_func,
                          commission, cancel_policy)
+        self.profit_orders = defaultdict(list)
+        self.loss_orders = defaultdict(list)
 
     def order(self, sid, amount, style, order_id=None):
 
@@ -152,6 +156,15 @@ class BracketBlotter(Blotter):
 
                     if not order.open:
                         closed_orders.append(order)
+                        if order.base_order_id:
+                            if order.limit:
+                                self.profit_orders[order.sid].append(order)
+                                self.cancel(order.other_bracket_id,
+                                            relay_status=False)
+                            elif order.stop:
+                                self.loss_orders[order.sid].append(order)
+                                self.cancel(order.other_bracket_id,
+                                            relay_status=False)
 
                     remaining_amount = self.close_existing_brackets(
                         asset=order.sid,
@@ -202,3 +215,4 @@ class BracketBlotter(Blotter):
                 b.sl_order.partially_cancel(current_amount)
 
         return amount
+
