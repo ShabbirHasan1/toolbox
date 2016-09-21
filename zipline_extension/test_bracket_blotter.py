@@ -1,6 +1,8 @@
 #
 # Copyright 2014 Quantopian, Inc.
 #
+# Modifications Copyright 2016 Bernoullio
+#
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
@@ -38,6 +40,10 @@ from zipline.testing.fixtures import (
     WithSimParams,
     ZiplineTestCase,
 )
+
+from .bracket_order import BracketOrder
+from .bracket_blotter import BracketBlotter
+from .execution import BracketedMarketOrder
 
 
 class BlotterTestCase(WithLogger,
@@ -337,4 +343,64 @@ class BlotterTestCase(WithLogger,
             amount=1
         )
 
-        blotter.prune_orders([other_order])
+    def test_bracket_order(self):
+        blotter = BracketBlotter(self.sim_params.data_frequency,
+                                 self.env.asset_finder)
+        asset_24 = blotter.asset_finder.retrieve_asset(24)
+        base_order_id = blotter.order(asset_24, 2,
+                                      BracketedMarketOrder(stop_loss=0.5,
+                                                           take_profit=1.5))
+        open_order = blotter.open_orders[asset_24][0]
+        assert open_order.id == base_order_id
+
+        # incoming order filling
+        dt = self.sim_params.sessions[0]
+        blotter.current_dt = dt
+        bar_data = BarData(
+            self.data_portal,
+            lambda: dt,
+            self.sim_params.data_frequency,
+            None
+        )
+        base_order = blotter.orders[base_order_id]
+        txns, _, closed_orders = blotter.get_transactions(bar_data)
+        blotter.prune_orders(closed_orders)
+
+        assert set(blotter.open_orders[asset_24]) == \
+            set([base_order.tp_order, base_order.sl_order])
+
+        assert len(blotter.orders) == 3  # base + tp + sl
+        assert blotter.orders[base_order.tp_order.id] == base_order.tp_order
+        assert blotter.orders[base_order.sl_order.id] == base_order.sl_order
+        assert base_order.tp_order.amount == - base_order.amount
+        assert base_order.sl_order.amount == - base_order.amount
+
+        assert blotter.orders[base_order.tp_order.id] in blotter.new_orders
+        assert blotter.orders[base_order.sl_order.id] in blotter.new_orders
+
+    def test_close_existing_brackets(self):
+        blotter = Blotter(self.sim_params.data_frequency,
+                          self.env.asset_finder)
+        base_order_id = "test_order_123"
+
+        asset_24 = blotter.asset_finder.retrieve_asset(24)
+
+        tp_order_id = blotter.order(asset_24, -100,
+                                    order_id=base_order_id + '_tp',
+                                    style=LimitOrder(1.5))
+        sl_order_id = blotter.order(asset_24, -100,
+                                    order_id=base_order_id + '_sl',
+                                    style=StopOrder(0.5))
+        blotter.existing_brackets[base_order_id] = BracketOrder(
+            base_order_id=base_order_id,
+            tp_order_id=tp_order_id,
+            sl_order_id=sl_order_id,
+            amount=-100
+        )
+
+        blotter.close_existing_brackets(amount=-50)
+        b_order = blotter.existing_brackets[base_order_id]
+        assert b_order.amount == -50
+        assert blotter.orders[b_order.tp_order_id].open_amount == -50
+        assert blotter.orders[b_order.tp_order_id].open_amount == -50
+

@@ -2,3 +2,6 @@ test:
   build: .
   volumes:
     - ./:/usr/src/app/
+    - ./zipline_root:/home/.zipline
+  environment:
+    - ZIPLINE_ROOT=/home/.zipline
