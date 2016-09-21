@@ -17,6 +17,7 @@
 from nose_parameterized import parameterized
 
 import pandas as pd
+import pytest
 
 from zipline.finance.blotter import Blotter
 from zipline.finance.order import ORDER_STATUS, Order
@@ -50,7 +51,7 @@ class BlotterTestCase(WithLogger,
                       WithDataPortal,
                       WithSimParams,
                       ZiplineTestCase):
-    START_DATE = pd.Timestamp('2006-01-05', tz='utc')
+    START_DATE = pd.Timestamp('2006-01-04', tz='utc')
     END_DATE = pd.Timestamp('2006-01-06', tz='utc')
     ASSET_FINDER_EQUITY_SIDS = 24, 25
 
@@ -58,21 +59,21 @@ class BlotterTestCase(WithLogger,
     def make_equity_daily_bar_data(cls):
         yield 24, pd.DataFrame(
             {
-                'open': [50, 50],
-                'high': [50, 50],
-                'low': [50, 50],
-                'close': [50, 50],
-                'volume': [100, 400],
+                'open': [50, 50, 51],
+                'high': [50, 50, 51],
+                'low': [50, 50, 51],
+                'close': [50, 50, 51],
+                'volume': [100, 400, 200],
             },
             index=cls.sim_params.sessions,
         )
         yield 25, pd.DataFrame(
             {
-                'open': [50, 50],
-                'high': [50, 50],
-                'low': [50, 50],
-                'close': [50, 50],
-                'volume': [100, 400],
+                'open': [50, 50, 51],
+                'high': [50, 50, 51],
+                'low': [50, 50, 51],
+                'close': [50, 50, 51],
+                'volume': [100, 400, 200],
             },
             index=cls.sim_params.sessions,
         )
@@ -343,13 +344,15 @@ class BlotterTestCase(WithLogger,
             amount=1
         )
 
+        blotter.prune_orders([other_order])
+
     def test_bracket_order(self):
         blotter = BracketBlotter(self.sim_params.data_frequency,
                                  self.env.asset_finder)
         asset_24 = blotter.asset_finder.retrieve_asset(24)
         base_order_id = blotter.order(asset_24, 2,
-                                      BracketedMarketOrder(stop_loss=0.5,
-                                                           take_profit=1.5))
+                                      BracketedMarketOrder(stop_loss=40.0,
+                                                           take_profit=60.0))
         open_order = blotter.open_orders[asset_24][0]
         assert open_order.id == base_order_id
 
@@ -378,29 +381,40 @@ class BlotterTestCase(WithLogger,
         assert blotter.orders[base_order.tp_order.id] in blotter.new_orders
         assert blotter.orders[base_order.sl_order.id] in blotter.new_orders
 
-    def test_close_existing_brackets(self):
-        blotter = Blotter(self.sim_params.data_frequency,
-                          self.env.asset_finder)
-        base_order_id = "test_order_123"
-
-        asset_24 = blotter.asset_finder.retrieve_asset(24)
-
-        tp_order_id = blotter.order(asset_24, -100,
-                                    order_id=base_order_id + '_tp',
-                                    style=LimitOrder(1.5))
-        sl_order_id = blotter.order(asset_24, -100,
-                                    order_id=base_order_id + '_sl',
-                                    style=StopOrder(0.5))
-        blotter.existing_brackets[base_order_id] = BracketOrder(
-            base_order_id=base_order_id,
-            tp_order_id=tp_order_id,
-            sl_order_id=sl_order_id,
-            amount=-100
+        # order in the other direction
+        blotter.order(asset_24, -1,
+                      BracketedMarketOrder(stop_loss=59.0, take_profit=41.0))
+        dt = self.sim_params.sessions[1]
+        blotter.current_dt = dt
+        bar_data = BarData(
+            self.data_portal,
+            lambda: dt,
+            self.sim_params.data_frequency,
+            None
         )
 
-        blotter.close_existing_brackets(amount=-50)
-        b_order = blotter.existing_brackets[base_order_id]
-        assert b_order.amount == -50
-        assert blotter.orders[b_order.tp_order_id].open_amount == -50
-        assert blotter.orders[b_order.tp_order_id].open_amount == -50
+        txns, _, closed_orders = blotter.get_transactions(bar_data)
+        assert len(blotter.orders) == 4  # base + tp + sl + reverse_order
+        assert base_order.tp_order.amount == -1
+        assert base_order.sl_order.amount == -1
+
+        # engulfing order in the other direction;
+        # should open buying tp and sl instead
+        new_order_id = blotter.order(asset_24, -5,
+                                     BracketedMarketOrder(stop_loss=59.0,
+                                                          take_profit=41.0))
+        dt = self.sim_params.sessions[2]
+        blotter.current_dt = dt
+        bar_data = BarData(
+            self.data_portal,
+            lambda: dt,
+            self.sim_params.data_frequency,
+            None
+        )
+
+        txns, _, closed_orders = blotter.get_transactions(bar_data)
+        assert len(blotter.orders) == 7  # 4 + new_base + new tp and sl
+        new_order = blotter.orders[new_order_id]
+        assert new_order.tp_order.amount == 4
+        assert new_order.sl_order.amount == 4
 

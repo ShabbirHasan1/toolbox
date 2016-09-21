@@ -150,7 +150,11 @@ class BracketBlotter(Blotter):
                     order.filled += txn.amount
                     order.commission += additional_commission
 
+                    if not order.open:
+                        closed_orders.append(order)
+
                     remaining_amount = self.close_existing_brackets(
+                        asset=order.sid,
                         amount=order.filled)
 
                     new_orders = order.open_bracket(remaining_amount,
@@ -167,10 +171,34 @@ class BracketBlotter(Blotter):
 
                     transactions.append(txn)
 
-                    if not order.open:
-                        closed_orders.append(order)
-
         return transactions, commissions, closed_orders
 
-    def close_existing_brackets(self, amount):
+    def close_existing_brackets(self, asset, amount):
+        brackets = [b for b in self.open_orders[asset] if b.base_order_id]
+
+        # sort by txn_price and walk
+        base_ids = [b.base_order_id for b in brackets]
+        base_ids = list(set(base_ids))
+
+        base_orders = [self.orders[id] for id in base_ids]
+        base_orders = sorted(base_orders,
+                             key=lambda i: i.txn_price)
+
+        for b in base_orders:
+            current_amount = b.tp_order.amount
+            if abs(amount) <= abs(current_amount):
+                # the reverse order partially closes existing tp/sl orders
+                if b.tp_order:
+                    b.tp_order.partially_cancel(current_amount-amount)
+                if b.sl_order:
+                    b.sl_order.partially_cancel(current_amount-amount)
+                amount = 0
+                break
+            else:
+                # the reverse order closes this entire existing tp/sl order
+                # pair, and walks on to the next tp/sl
+                amount -= current_amount
+                b.tp_order.partially_cancel(current_amount)
+                b.sl_order.partially_cancel(current_amount)
+
         return amount

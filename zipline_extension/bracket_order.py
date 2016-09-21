@@ -3,9 +3,9 @@ from zipline.finance.order import Order
 
 class BracketOrder(Order):
     __slots__ = ["sl_order", "tp_order", "take_profit", "stop_loss",
-                 "txn_price", "trailling"] + Order.__slots__
+                 "base_order_id", "txn_price", "trailling"] + Order.__slots__
 
-    def __init__(self, dt, sid, amount, stop=None, limit=None,
+    def __init__(self, dt, sid, amount, stop=None, limit=None, base_order_id=None,
                  take_profit=None, stop_loss=None, trailling=None, filled=0,
                  commission=0, id=None, tp_order_id=None, sl_order_id=None):
         Order.__init__(self, dt, sid, amount, stop, limit, filled,
@@ -14,6 +14,8 @@ class BracketOrder(Order):
         self.take_profit = take_profit
         self.sl_order, self.tp_order = None, None
         self.trailling = trailling
+        self.base_order_id = base_order_id
+        self.txn_price = None
 
     def open_bracket(self, amount, price, dt):
         """
@@ -35,14 +37,21 @@ class BracketOrder(Order):
         None
         """
         self.txn_price = price
-        if self.take_profit:
-            self.tp_order = Order(dt, self.sid,
-                                  - amount,
-                                  limit=self.take_profit,
-                                  id=self.id + '_tp')
-        if self.stop_loss:
-            self.sl_order = Order(dt, self.sid,
-                                  - amount,
-                                  stop=self.stop_loss,
-                                  id=self.id + '_sl')
+
+        if amount and self.take_profit:
+            self.tp_order = BracketOrder(dt, self.sid,
+                                         - amount,
+                                         limit=self.take_profit,
+                                         id=self.id + '_tp',
+                                         base_order_id=self.id)
+
+        if amount and self.stop_loss:
+            self.sl_order = BracketOrder(dt, self.sid,
+                                         - amount,
+                                         stop=self.stop_loss,
+                                         id=self.id + '_sl',
+                                         base_order_id=self.id)
         return self.tp_order, self.sl_order
+
+    def partially_cancel(self, amount):
+        self.amount -= amount
