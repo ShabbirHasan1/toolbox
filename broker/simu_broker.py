@@ -74,50 +74,49 @@ class SimuBroker(object):
 
         # Convert deprecated limit_price and stop_price parameters to use
         # ExecutionStyle objects.
-        style = self.convert_order_params_for_blotter(limit,
-                                                      stop,
-                                                      stop_loss,
-                                                      take_profit,
-                                                      trailling)
+        style = convert_order_params_for_blotter(limit,
+                                                 stop,
+                                                 stop_loss,
+                                                 take_profit,
+                                                 trailling)
         return self.blotter.order(instrument, amount, style)
 
-    def convert_order_params_for_blotter(self,
-                                         limit_price,
-                                         stop_price,
-                                         stop_loss,
-                                         take_profit,
-                                         trailling):
-        if stop_loss is None and take_profit is None:
-            if limit_price and stop_price:
-                return StopLimitOrder(limit_price, stop_price)
-            if limit_price:
-                return LimitOrder(limit_price)
-            if stop_price:
-                return StopOrder(stop_price)
-            else:
-                return MarketOrder()
+def convert_order_params_for_blotter(limit_price,
+                                     stop_price,
+                                     stop_loss,
+                                     take_profit,
+                                     trailling):
+    if stop_loss is None and take_profit is None:
+        if limit_price and stop_price:
+            return StopLimitOrder(limit_price, stop_price)
+        if limit_price:
+            return LimitOrder(limit_price)
+        if stop_price:
+            return StopOrder(stop_price)
         else:
-            if limit_price and stop_price:
-                return BracketedStopLimitOrder(stop_price=stop_price,
-                                               limit_price=limit_price,
-                                               stop_loss=stop_loss,
-                                               take_profit=take_profit,
-                                               trailling=trailling)
-            if limit_price:
-                return BracketedLimitOrder(stop_price=stop_price,
+            return MarketOrder()
+    else:
+        if limit_price and stop_price:
+            return BracketedStopLimitOrder(stop_price=stop_price,
                                            limit_price=limit_price,
                                            stop_loss=stop_loss,
                                            take_profit=take_profit,
                                            trailling=trailling)
-            if stop_price:
-                return BracketedStopOrder(stop_price=stop_price,
-                                          limit_price=limit_price,
-                                          stop_loss=stop_loss,
-                                          take_profit=take_profit,
-                                          trailling=trailling)
-            else:
-                return BracketedMarketOrder(stop_price=stop_price,
-                                            limit_price=limit_price,
-                                            stop_loss=stop_loss,
-                                            take_profit=take_profit,
-                                            trailling=trailling)
+        if limit_price:
+            return BracketedLimitOrder(stop_price=stop_price,
+                                       limit_price=limit_price,
+                                       stop_loss=stop_loss,
+                                       take_profit=take_profit,
+                                       trailling=trailling)
+        if stop_price:
+            return BracketedStopOrder(stop_price=stop_price,
+                                      limit_price=limit_price,
+                                      stop_loss=stop_loss,
+                                      take_profit=take_profit,
+                                      trailling=trailling)
+        else:
+            return BracketedMarketOrder(stop_price=stop_price,
+                                        limit_price=limit_price,
+                                        stop_loss=stop_loss,
+                                        take_profit=take_profit,
+                                        trailling=trailling)

@@ -6,7 +6,24 @@ from zipline.testing.fixtures import (
     ZiplineTestCase,
 )
 
-from .simu_broker import SimuBroker
+from .simu_broker import (
+    SimuBroker,
+    convert_order_params_for_blotter
+)
+
+from ..zipline_extension.execution import (
+    BracketedLimitOrder,
+    BracketedStopOrder,
+    BracketedStopLimitOrder,
+    BracketedMarketOrder
+)
+
+from zipline.finance.execution import (
+    LimitOrder,
+    MarketOrder,
+    StopLimitOrder,
+    StopOrder,
+)
 
 from zipline.api import symbol
 
@@ -120,3 +137,24 @@ class SimuBrokerTestCase(WithDataPortal,
                                 sim_params=self.sim_params,
                                 env=self.env)
         algo.run(self.data_portal)
+
+
+
+def test_convert_order_params_for_blotter():
+    assert convert_order_params_for_blotter(None, None, None, None, None).__class__ == MarketOrder
+
+    assert convert_order_params_for_blotter(1, None, None, None, None).__class__ == LimitOrder
+
+    assert convert_order_params_for_blotter(None, 2, None, None, None).__class__ == StopOrder
+
+    assert convert_order_params_for_blotter(1, 2, None, None, None).__class__ == StopLimitOrder
+
+    assert convert_order_params_for_blotter(1, 2, 3, None, None).__class__ == BracketedStopLimitOrder
+
+    assert convert_order_params_for_blotter(1, 2, 3, 4, None).__class__ == BracketedStopLimitOrder
+
+    assert convert_order_params_for_blotter(None, 2, 3, 4, None).__class__ == BracketedStopOrder
+
+    assert convert_order_params_for_blotter(1, None, 3, 4, None).__class__ == BracketedLimitOrder
+
+    assert convert_order_params_for_blotter(None, None, 3, 4, None).__class__ == BracketedMarketOrder
