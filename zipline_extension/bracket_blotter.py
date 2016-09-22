@@ -20,7 +20,6 @@ from zipline.finance.blotter import Blotter
 
 from .bracket_order import BracketOrder
 from collections import defaultdict
-import pytest
 
 log = Logger('Blotter')
 warning_logger = Logger('AlgoWarning')
@@ -151,6 +150,7 @@ class BracketBlotter(Blotter):
                             "cost": additional_commission
                         })
 
+                    transactions.append(txn)
                     order.filled += txn.amount
                     order.commission += additional_commission
 
@@ -166,23 +166,23 @@ class BracketBlotter(Blotter):
                                 self.cancel(order.other_bracket_id,
                                             relay_status=False)
 
-                    remaining_amount = self.close_existing_brackets(
-                        asset=order.sid,
-                        amount=order.filled)
+                    # for base_order only:
+                    if order.base_order_id is None:
+                        remaining_amount = self.close_existing_brackets(
+                            asset=order.sid,
+                            amount=order.filled)
 
-                    new_orders = order.open_bracket(remaining_amount,
-                                                    txn.price, txn.dt)
-                    new_orders = list(filter(None, new_orders))
-                    if new_orders:
-                        self.new_orders += new_orders
-                        self.open_orders[order.sid] += new_orders
-                        for o in new_orders:
-                            self.orders[o.id] = o
-                        self.new_orders.append(order)
+                        new_orders = order.open_bracket(remaining_amount,
+                                                        txn.price, txn.dt)
+                        new_orders = list(filter(None, new_orders))
+                        if new_orders:
+                            self.new_orders += new_orders
+                            self.open_orders[order.sid] += new_orders
+                            for o in new_orders:
+                                self.orders[o.id] = o
+                            # self.new_orders.append(order)
 
-                    order.dt = txn.dt
-
-                    transactions.append(txn)
+                        order.dt = txn.dt
 
         return transactions, commissions, closed_orders
 
@@ -199,6 +199,10 @@ class BracketBlotter(Blotter):
 
         for b in base_orders:
             current_amount = b.tp_order.amount
+            if (amount > 0) != (current_amount > 0):
+                # The reverse order amount isn't reverse at all.
+                # Just create additional tp/sl, please
+                break
             if abs(amount) <= abs(current_amount):
                 # the reverse order partially closes existing tp/sl orders
                 if b.tp_order:
@@ -215,4 +219,3 @@ class BracketBlotter(Blotter):
                 b.sl_order.partially_cancel(current_amount)
 
         return amount
-
