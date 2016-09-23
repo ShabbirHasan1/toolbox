@@ -27,7 +27,8 @@ class SimuBroker(object):
         Parameters
         ----------
         instrument: zipline Asset
-            The equity to be ordered. Should respond to .symbol() and .sid()
+            The equity to be ordered.
+            Can be obtained from zipline_api.symbol("XX")
 
         amount: int
             The amount of shares to order. If ``amount`` is positive, this is
