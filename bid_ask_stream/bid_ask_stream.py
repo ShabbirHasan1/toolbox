@@ -5,6 +5,7 @@ zipline data.bundle
 in _minute_iter docstring
 """
 import os
+import re
 import zipfile
 import pandas as pd
 import numpy as np
@@ -78,7 +79,10 @@ def ingest(environ,
                 zfile = zipfile.ZipFile(os.path.join(current_dir, z), 'r')
                 zfile.extractall(current_dir)
 
-            csvs = filter(lambda x: ".csv" in x, os.listdir(current_dir))
+            # ensure data is ingested chronologically
+            sorted_csv_name = sorted(os.listdir(current_dir), key=lambda x: (int(re.sub('\D', '', x)), x))
+
+            csvs = filter(lambda x: ".csv" in x, sorted_csv_name)
             with maybe_show_progress(
                     csvs,
                     show_progress,
