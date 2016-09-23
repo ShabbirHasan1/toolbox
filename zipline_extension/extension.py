@@ -11,7 +11,7 @@ sys.path.append(os.environ.get("ZIPLINE_ROOT"))
 from .. import bid_ask_stream
 from zipline.data.bundles import register
 from zipline.utils.calendars import register_calendar
-from ..utils.calendars.exchange_calendar_forex import ForexCalendar
+from .calendars.exchange_calendar_forex import ForexCalendar
 import pandas as pd
 
 register_calendar('forex', ForexCalendar())
