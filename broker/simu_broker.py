@@ -5,12 +5,6 @@ from ..zipline_extension.execution import (
         BracketedStopLimitOrder,
         BracketedMarketOrder
 )
-from zipline.finance.execution import (
-        LimitOrder,
-        MarketOrder,
-        StopLimitOrder,
-        StopOrder,
-)
 from zipline.utils.math_utils import (
         round_if_near_integer
 )
@@ -81,42 +75,33 @@ class SimuBroker(object):
                                                  trailling)
         return self.blotter.order(instrument, amount, style)
 
+
 def convert_order_params_for_blotter(limit_price,
                                      stop_price,
                                      stop_loss,
                                      take_profit,
                                      trailling):
-    if stop_loss is None and take_profit is None:
-        if limit_price and stop_price:
-            return StopLimitOrder(limit_price, stop_price)
-        if limit_price:
-            return LimitOrder(limit_price)
-        if stop_price:
-            return StopOrder(stop_price)
-        else:
-            return MarketOrder()
-    else:
-        if limit_price and stop_price:
-            return BracketedStopLimitOrder(stop_price=stop_price,
-                                           limit_price=limit_price,
-                                           stop_loss=stop_loss,
-                                           take_profit=take_profit,
-                                           trailling=trailling)
-        if limit_price:
-            return BracketedLimitOrder(stop_price=stop_price,
+    if limit_price and stop_price:
+        return BracketedStopLimitOrder(stop_price=stop_price,
                                        limit_price=limit_price,
                                        stop_loss=stop_loss,
                                        take_profit=take_profit,
                                        trailling=trailling)
-        if stop_price:
-            return BracketedStopOrder(stop_price=stop_price,
-                                      limit_price=limit_price,
-                                      stop_loss=stop_loss,
-                                      take_profit=take_profit,
-                                      trailling=trailling)
-        else:
-            return BracketedMarketOrder(stop_price=stop_price,
-                                        limit_price=limit_price,
-                                        stop_loss=stop_loss,
-                                        take_profit=take_profit,
-                                        trailling=trailling)
+    if limit_price:
+        return BracketedLimitOrder(stop_price=stop_price,
+                                   limit_price=limit_price,
+                                   stop_loss=stop_loss,
+                                   take_profit=take_profit,
+                                   trailling=trailling)
+    if stop_price:
+        return BracketedStopOrder(stop_price=stop_price,
+                                  limit_price=limit_price,
+                                  stop_loss=stop_loss,
+                                  take_profit=take_profit,
+                                  trailling=trailling)
+    else:
+        return BracketedMarketOrder(stop_price=stop_price,
+                                    limit_price=limit_price,
+                                    stop_loss=stop_loss,
+                                    take_profit=take_profit,
+                                    trailling=trailling)

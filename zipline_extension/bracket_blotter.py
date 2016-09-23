@@ -64,9 +64,9 @@ class BracketBlotter(Blotter):
             amount=amount,
             stop=style.get_stop_price(is_buy),
             limit=style.get_limit_price(is_buy),
-            take_profit=None or style.get_tp(is_buy),
-            stop_loss=None or style.get_sl(is_buy),
-            trailling=None or style.get_trailling(is_buy),
+            take_profit=style.get_tp(is_buy),
+            stop_loss=style.get_sl(is_buy),
+            trailling=style.get_trailling(is_buy),
             id=order_id
         )
 
