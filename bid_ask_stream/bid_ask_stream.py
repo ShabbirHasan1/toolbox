@@ -24,7 +24,27 @@ def ingest(environ,
            cache,
            show_progress,
            output_dir):
+    """
+    Ingests csv data of bid, ask streamed prices, for example
+    from TrueFX. The csv should look something like
 
+        EUR/USD,20160729 20:50:12.065,1.11759,1.11766
+        EUR/USD,20160729 20:50:12.238,1.11759,1.11766
+        EUR/USD,20160729 20:50:13.098,1.11759,1.11766
+        EUR/USD,20160729 20:50:13.183,1.11759,1.11766
+        EUR/USD,20160729 20:50:15.758,1.11759,1.11766
+
+    This function can be registered for a zipline bundle:
+
+    .. code-block:: python
+
+        from zipline.data.bundles import register
+        register('bid_ask_stream', bid_ask_stream.ingest,
+                start_session= pd.Timestamp(os.environ.get("DATA_START"), tz='utc'),
+                end_session= pd.Timestamp(os.environ.get("DATA_END"), tz='utc'),
+                calendar='forex', minutes_per_day=1440)
+            ...
+    """
     path = environ.get('BID_ASK_STREAM_CSV_FOLDER')
     instruments = os.listdir(path)  # get ["EURSD", "AUDUSD"]
 
