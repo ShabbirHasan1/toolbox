@@ -4,3 +4,4 @@ nose_parameterized
 mock==2.0.0
 testfixtures==4.10.1
 responses==0.5.1
+requests_mock

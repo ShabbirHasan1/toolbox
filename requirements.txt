@@ -1,3 +1,4 @@
 pandas==0.18.1
 zipline==1.0.2
 logbook
+git+git://github.com/oanda/oandapy@master#egg=oandapy
