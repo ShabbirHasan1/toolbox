@@ -139,15 +139,14 @@ class SimuBrokerTestCase(WithDataPortal,
         algo.run(self.data_portal)
 
 
-
 def test_convert_order_params_for_blotter():
-    assert convert_order_params_for_blotter(None, None, None, None, None).__class__ == MarketOrder
+    assert convert_order_params_for_blotter(None, None, None, None, None).__class__ == BracketedMarketOrder
 
-    assert convert_order_params_for_blotter(1, None, None, None, None).__class__ == LimitOrder
+    assert convert_order_params_for_blotter(1, None, None, None, None).__class__ == BracketedLimitOrder
 
-    assert convert_order_params_for_blotter(None, 2, None, None, None).__class__ == StopOrder
+    assert convert_order_params_for_blotter(None, 2, None, None, None).__class__ == BracketedStopOrder
 
-    assert convert_order_params_for_blotter(1, 2, None, None, None).__class__ == StopLimitOrder
+    assert convert_order_params_for_blotter(1, 2, None, None, None).__class__ == BracketedStopLimitOrder
 
     assert convert_order_params_for_blotter(1, 2, 3, None, None).__class__ == BracketedStopLimitOrder
 
