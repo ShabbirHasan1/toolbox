@@ -88,6 +88,9 @@ class Oanda(object):
         if take_profit:
             params["takeProfit"] = precision % take_profit
 
+        if trailling:
+            params["traillingStop"] = trailling
+
         try:
             response = self.oanda.create_order(**params)
             logging.info("#create_order params=%s response=%s" % (params, response))
