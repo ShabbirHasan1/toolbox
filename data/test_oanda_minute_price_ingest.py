@@ -1,18 +1,12 @@
 import os
 import pytest
 import requests_mock
-import pandas as pd
 from sqlalchemy import create_engine
 from datetime import datetime, timedelta
 
 from .oanda_minute_price_ingest import OandaMinutePriceIngest
-from ..zipline_extension.calendars.exchange_calendar_forex import ForexCalendar
 
-from zipline.assets import AssetDBWriter
-from zipline.data.minute_bars import (
-    BcolzMinuteBarReader,
-    BcolzMinuteBarWriter
-)
+from zipline.assets import AssetFinder
 
 
 @pytest.fixture
@@ -56,7 +50,7 @@ def candles():
 
 
 @pytest.fixture
-def data_dir():
+def ohlcv_path():
     version = OandaMinutePriceIngest.VERSION
     root = os.environ.get("ZIPLINE_ROOT", "/home/.zipline")
     return '{}/data/oanda/{}-{}/ohlcv.db' \
@@ -64,31 +58,28 @@ def data_dir():
 
 
 @pytest.fixture
-def a_writer(data_dir):
-    return AssetDBWriter(data_dir)
+def assets_path():
+    version = OandaMinutePriceIngest.VERSION
+    root = os.environ.get("ZIPLINE_ROOT", "/home/.zipline")
+    return '{}/data/oanda/{}-{}/assets.db' \
+            .format(root, 'practice', version)
 
 
-@pytest.fixture
-def m_writer(data_dir):
-    end_session = datetime.now() + timedelta(days=7)
-    cal = ForexCalendar(end=end_session)
-    return BcolzMinuteBarWriter(
-        data_dir,
-        calendar=cal,
-        start_session=pd.Timestamp('1990-01-01', tz='UTC'),
-        end_session=end_session,
-        minutes_per_day=1440)
-
-
-def test_oanda_prices_ingest(candles, data_dir):
-    ingest = OandaMinutePriceIngest(data_dir)
+def test_oanda_prices_ingest(candles, ohlcv_path, assets_path):
+    ingest = OandaMinutePriceIngest(ohlcv_path, assets_path)
 
     with requests_mock.mock() as m:
         m.get(ingest.url(), json=candles)
 
         ingest.run("AUD_CAD")
 
-        eng = create_engine('sqlite:///{}'.format(data_dir))
+        eng = create_engine('sqlite:///{}'.format(ohlcv_path))
         c = eng.connect()
-        for row in c.execute("SELECT * from minute_bars_2"):
-            print(row)
+        res = c.execute("SELECT count(*) from minute_bars_2")
+        assert res.fetchone()[0] > 2
+        c.close()
+
+        eng = create_engine('sqlite:///{}'.format(assets_path))
+        reader = AssetFinder(eng)
+        two = reader.retrieve_asset(2)
+        assert two.symbol == "AUD_CAD"

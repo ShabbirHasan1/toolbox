@@ -36,11 +36,21 @@ class Oanda(object):
         """
         return self.sym_sid_map[symbol]
 
+    def symbol(self, sid):
+        return self.sid_sym_map[sid]
+
+    def display_name(self, sid):
+        return self.sid_name_map[sid]
+
+    def multiplier(self, instrument):
+        return self.ohlc_ratio[instrument]
+
     def load_instruments_info(self):
         with open('broker/oanda_instruments.json') as data_file:
             self.instruments = json.load(data_file)
             self.sid_sym_map = {i['sid']: i['instrument'] for i in self.instruments}
             self.sym_sid_map = {i['instrument']: i['sid'] for i in self.instruments}
+            self.sid_name_map = {i['sid']: i['displayName'] for i in self.instruments}
             self.ohlc_ratio  = {i['instrument']: int(100 * 1 / float(i['pip'])) for i in self.instruments}
 
     def create_order(self, instrument, amount,

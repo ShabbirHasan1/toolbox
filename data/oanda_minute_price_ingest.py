@@ -1,4 +1,7 @@
+from zipline.assets.asset_db_schema import ASSET_DB_VERSION
+
 import os
+import numpy as np
 import pandas as pd
 from sqlalchemy import (
     create_engine,
@@ -9,6 +12,9 @@ from sqlalchemy import (
     String
 )
 from ..broker import Oanda
+from zipline.assets import AssetDBWriter, AssetFinder
+from zipline.assets.asset_writer import write_version_info
+from zipline.assets.asset_db_schema import version_info
 
 
 class OandaMinutePriceIngest():
@@ -28,13 +34,14 @@ class OandaMinutePriceIngest():
 
     VERSION = 0
 
-    def __init__(self, output_dir):
-        echo = os.environ.get("SQLITE_ECHO", False)
-        self.engine = create_engine('sqlite:///{}'.format(output_dir), echo=echo)
+    def __init__(self, ohlcv_path, assets_path):
         self.broker = Oanda(os.environ.get("OANADA_ACCOUNT_ID", "test"))
 
-    def url(self):
-        return '%s/%s' % (self.broker.oanda.api_url, 'v1/candles')
+        echo = os.environ.get("SQLITE_ECHO", False)
+        self.engine = create_engine('sqlite:///{}'.format(ohlcv_path),
+                                    echo=echo)
+        self.asset_engine = create_engine('sqlite:///{}'.format(assets_path),
+                                          echo=echo)
 
     def run(self, symbol):
         """
@@ -50,7 +57,11 @@ class OandaMinutePriceIngest():
         candles = self.broker.get_history(symbol)
         df = pd.DataFrame(candles)
         df = df[df['complete']]
+
+        # can't write with UTC, so we keep the index naiive.
+        # See https://github.com/pydata/pandas/issues/9086
         df.set_index(pd.DatetimeIndex(df.time), inplace=True)
+
         df.rename(columns={'openMid': 'open',
                            'highMid': 'high',
                            'lowMid': 'low',
@@ -58,63 +69,80 @@ class OandaMinutePriceIngest():
                   inplace=True)
         df = df[['open', 'high', 'low', 'close', 'volume']]
 
-        convert_price_to_int(df, self.broker.ohlc_ratio[symbol])
-        self.write_sid(self.broker.sid(symbol), df)
+        convert_price_to_int(df, self.broker.multiplier(symbol))
 
-    def write_sid(self, sid, df):
-        self.ensure_table(sid)
-        self.delete_duplicates(sid, df)
+        self._write_sid(self.broker.sid(symbol), df)
+        self._write_asset_info(self.broker.sid(symbol), df)
+
+    def url(self):
+        return '%s/%s' % (self.broker.oanda.api_url, 'v1/candles')
+
+    def _write_sid(self, sid, df):
+        self._ensure_table(sid)
+        self._delete_duplicate_minutes(sid, df)
         df.to_sql(name="minute_bars_{}".format(sid),
                   con=self.engine,
                   index_label="datetime",
+                  dtype={"datetime": String(30)},
                   if_exists='append')
 
-    def ensure_table(self, sid):
+    def _write_asset_info(self, sid, df):
+        """
+          - Loads existing asset info,
+          - compares and update the date boundaries,
+          - then delete the asset info row, because AssetDBWriter doesn't
+                support replacing.
+          - And finally write the new asset info
+        """
+        reader = AssetFinder(self.asset_engine)
+        asset = reader.retrieve_asset(sid, default_none=True)
+        self.asset_metadata = build_tzaware_metadata(asset)
+
+        # Construct a tz-aware index, for date comparison
+        index = df.index.tz_localize('UTC')
+
+        changed = False
+        if self.asset_metadata.ix[sid, 'start_date'] is pd.NaT or self.asset_metadata.start_date.ix[sid] > index[0]:
+            changed = True
+            self.asset_metadata.ix[sid, 'start_date'] = index[0]
+
+        if self.asset_metadata.ix[sid, 'end_date'] is pd.NaT or self.asset_metadata.end_date.ix[sid] < index[-1]:
+            changed = True
+            self.asset_metadata.ix[sid, 'end_date'] = index[-1]
+            self.asset_metadata.ix[sid, 'auto_close_date'] = index[-1] + pd.Timedelta(days=1)
+
+        if changed:
+            writer = AssetDBWriter(self.asset_engine)
+            self._ensure_version()
+            self._delete_existing_asset_metadata(sid)
+            writer.write(equities=self.asset_metadata.dropna())
+
+    def _ensure_table(self, sid):
         table(sid).create(self.engine, checkfirst=True)
 
-    def delete_duplicates(self, sid, df):
+    def _delete_duplicate_minutes(self, sid, df):
         c = self.engine.connect()
         datetime_list = df.index.strftime("%Y-%m-%d %H:%M:%S.%f")
         t = table(sid)
         c.execute(t.delete().where(t.c.datetime.in_(datetime_list)))
+        c.close()
 
-    def on_success(self, data):
-        """
-        Aggregates tick data into a minute bar,
-        then write with minute_bar_writer.
+    def _delete_existing_asset_metadata(self, sid):
+        metadata = MetaData(self.asset_engine, reflect=True)
+        c = self.asset_engine.connect()
 
-        Parameters
-        ----------
-        - data : response dict, loaded from stream response json
-        """
-        """
-        tick = data['tick']
-        tick_series = pending_bars[tick['instrument']]
-        time = tick['time']
+        for t in ['equities', 'equity_symbol_mappings', 'asset_router']:
+            table = metadata.tables[t]
+            c.execute(table.delete().where(table.c.sid == sid))
 
-        if new_minute:
-            bar = tick_series.resample('1Min').ohlc()
-            bar['volumne'] = tick_series.resmaple('1Min').count()
+        c.close()
 
-            self.minute_bar_writer.write_sid(sid, bar[-1])
-
-            pending_bar[tick['instrument']] = pd.Series([mid], index=[time])
-
-        else:
-            mid = (tick['bid'] + tick['ask']) / 2
-            pending_bar[tick['instrument']].set_value(time, mid)
-        """
-        for s in self.on_success_listeners:
-            s(self, data)
-
-        self.minute_bar_writer.write()
-        self.asset_db_writer.write()
-
-    def on_error(self, data):
-        """
-        Backoff and try again
-        """
-        pass
+    def _ensure_version(self):
+        metadata = MetaData(self.asset_engine, reflect=True)
+        if 'version_info' not in metadata.tables:
+            write_version_info(self.asset_engine.connect(),
+                               version_info,
+                               ASSET_DB_VERSION)
 
 
 def convert_price_to_int(df, ratio):
@@ -133,3 +161,20 @@ def table(sid):
                  Column('low', Integer, nullable=False),
                  Column('close', Integer, nullable=False),
                  Column('volume', Integer, nullable=False))
+
+
+def build_tzaware_metadata(asset):
+    df = pd.DataFrame(np.empty(1, dtype=[
+        ('start_date',      'datetime64[ns]'),
+        ('end_date',        'datetime64[ns]'),
+        ('auto_close_date', 'datetime64[ns]'),
+        ('exchange',        'object'),
+        ('symbol',          'object'),
+        ('asset_name',      'object'),
+        ]), index=[asset.sid])
+    df['start_date'] = df.start_date.dt.tz_localize('UTC')
+    df['end_date'] = df.end_date.dt.tz_localize('UTC')
+    df['auto_close_date'] = df.auto_close_date.dt.tz_localize('UTC')
+
+    df.ix[asset.sid] = asset.start_date, asset.end_date, asset.auto_close_date, asset.exchange, asset.symbol, asset.asset_name
+    return df
