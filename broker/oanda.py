@@ -3,8 +3,9 @@ See http://developer.oanda.com/rest-live
 
 TODO: Benchmark latency
 """
-from __future__ import absolute_import
+import pytest
 import os
+import json
 import oandapy
 
 import logging
@@ -18,8 +19,29 @@ class Oanda(object):
 
     def __init__(self, id):
         self.id = id
+        self.load_instruments_info()
         self.oanda = oandapy.API(environment=os.getenv("OANDA_ENV", "practice"),
                                  access_token=os.getenv("OANDA_ACCESS_TOKEN", "xxx"))
+
+    def sid(self, symbol):
+        """
+        Returns the arbitrary id assigned to the instrument
+        symbol.
+
+        See broker/oanda_instruments.json
+
+        Return
+        ------
+        sid : int
+        """
+        return self.sym_sid_map[symbol]
+
+    def load_instruments_info(self):
+        with open('broker/oanda_instruments.json') as data_file:
+            self.instruments = json.load(data_file)
+            self.sid_sym_map = {i['sid']: i['instrument'] for i in self.instruments}
+            self.sym_sid_map = {i['instrument']: i['sid'] for i in self.instruments}
+            self.ohlc_ratio  = {i['instrument']: int(100 * 1 / float(i['pip'])) for i in self.instruments}
 
     def create_order(self, instrument, amount,
                      limit=None, stop=None, expiry=None,
@@ -99,3 +121,10 @@ class Oanda(object):
 
         return response["tradeOpened"]["id"]
 
+    def get_history(self, instrument, count=500, resolution="m1", candleFormat="midpoint"):
+        params = {"instrument": instrument.upper(),
+                  "count": count,
+                  "granularity": resolution.upper(),
+                  "candleFormat": candleFormat}
+        response = self.oanda.get_history(**params)
+        return response["candles"]

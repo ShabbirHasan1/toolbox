@@ -1,12 +1,13 @@
 import os
 import pytest
+
+from . import bid_ask_stream
+
 from datetime import datetime, timedelta
 import pytz
 import pandas as pd
-from . import bid_ask_stream
-import zipline
 from ..zipline_extension.calendars.exchange_calendar_forex import ForexCalendar
-from zipline.data.bundles import register
+from zipline.data.bundles import register, ingest
 from zipline.utils.calendars import register_calendar
 
 
@@ -24,7 +25,7 @@ def test_ingest():
              end_session=pd.Timestamp(os.environ.get("DATA_END"), tz='utc'),
              minutes_per_day=1440)
 
-    zipline.data.bundles.ingest('bid_ask_stream', show_progress=True)
+    ingest('bid_ask_stream', show_progress=True)
     assert True
 
 
