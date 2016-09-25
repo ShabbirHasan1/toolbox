@@ -5,7 +5,7 @@ import pandas as pd
 from sqlalchemy import create_engine
 from datetime import datetime, timedelta
 
-from .oanda_stream import OandaMinutePriceIngest
+from .oanda_minute_price_ingest import OandaMinutePriceIngest
 from ..zipline_extension.calendars.exchange_calendar_forex import ForexCalendar
 
 from zipline.assets import AssetDBWriter
