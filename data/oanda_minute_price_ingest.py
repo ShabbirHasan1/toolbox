@@ -12,7 +12,7 @@ from sqlalchemy import (
     String
 )
 from ..broker import Oanda
-from zipline.assets import AssetDBWriter, AssetFinder
+from zipline.assets import AssetDBWriter, AssetFinder, Equity
 from zipline.assets.asset_writer import write_version_info
 from zipline.assets.asset_db_schema import version_info
 
@@ -95,7 +95,10 @@ class OandaMinutePriceIngest():
           - And finally write the new asset info
         """
         reader = AssetFinder(self.asset_engine)
-        asset = reader.retrieve_asset(sid, default_none=True)
+        asset = reader.retrieve_asset(sid, default_none=True) \
+                or Equity(sid, "forex",
+                          symbol=self.broker.symbol(sid),
+                          asset_name=self.broker.display_name(sid))
         self.asset_metadata = build_tzaware_metadata(asset)
 
         # Construct a tz-aware index, for date comparison
@@ -164,6 +167,7 @@ def table(sid):
 
 
 def build_tzaware_metadata(asset):
+    assert asset is not None
     df = pd.DataFrame(np.empty(1, dtype=[
         ('start_date',      'datetime64[ns]'),
         ('end_date',        'datetime64[ns]'),

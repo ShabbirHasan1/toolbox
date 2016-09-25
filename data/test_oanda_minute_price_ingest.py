@@ -71,7 +71,7 @@ def test_oanda_prices_ingest(candles, ohlcv_path, assets_path):
     with requests_mock.mock() as m:
         m.get(ingest.url(), json=candles)
 
-        ingest.run("AUD_CAD")
+        ingest.run("EUR_USD")
 
         eng = create_engine('sqlite:///{}'.format(ohlcv_path))
         c = eng.connect()
@@ -81,5 +81,5 @@ def test_oanda_prices_ingest(candles, ohlcv_path, assets_path):
 
         eng = create_engine('sqlite:///{}'.format(assets_path))
         reader = AssetFinder(eng)
-        two = reader.retrieve_asset(2)
-        assert two.symbol == "AUD_CAD"
+        two = reader.retrieve_asset(37)
+        assert two.symbol == "EUR_USD"
