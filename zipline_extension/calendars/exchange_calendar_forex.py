@@ -18,4 +18,3 @@ class ForexCalendar(TradingCalendar):
     @property
     def close_time(self):
         return time(23, 59)
-

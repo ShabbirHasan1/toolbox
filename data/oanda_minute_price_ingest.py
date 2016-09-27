@@ -43,7 +43,7 @@ class OandaMinutePriceIngest():
         self.asset_engine = create_engine('sqlite:///{}'.format(assets_path),
                                           echo=echo)
 
-    def run(self, symbol):
+    def run(self, symbol, end=None):
         """
         Request for 1 minute candles from oanda, and write to sqlite3.
         Prices are saved as integer, from multiplying with the actual
@@ -54,7 +54,10 @@ class OandaMinutePriceIngest():
         1.0000, as integer 10000
 
         """
-        candles = self.broker.get_history(symbol)
+        if end:
+            end = end.isoformat()
+
+        candles = self.broker.get_history(symbol, end=end)
         df = pd.DataFrame(candles)
         df = df[df['complete']]
 

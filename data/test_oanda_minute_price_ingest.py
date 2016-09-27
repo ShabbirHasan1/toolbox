@@ -1,4 +1,6 @@
 import os
+import pandas as pd
+from ..zipline_extension import ForexCalendar
 import pytest
 import requests_mock
 from sqlalchemy import create_engine
@@ -56,6 +58,12 @@ def ohlcv_path():
     return '{}/data/oanda/{}-{}/ohlcv.db' \
             .format(root, 'practice', version)
 
+@pytest.fixture
+def root_dir():
+    version = OandaMinutePriceIngest.VERSION
+    root = os.environ.get("ZIPLINE_ROOT", "/home/.zipline")
+    return '{}/data/oanda/{}-{}' \
+            .format(root, 'practice', version)
 
 @pytest.fixture
 def assets_path():
@@ -64,9 +72,18 @@ def assets_path():
     return '{}/data/oanda/{}-{}/assets.db' \
             .format(root, 'practice', version)
 
+@pytest.fixture
+def trading_calendar():
+    start = pd.Timestamp('2016-09-02', tz='utc')
+    return ForexCalendar(start)
 
-def test_oanda_prices_ingest(candles, ohlcv_path, assets_path):
-    ingest = OandaMinutePriceIngest(ohlcv_path, assets_path)
+def test_oanda_prices_ingest(candles,
+                             trading_calendar,
+                             root_dir,
+                             assets_path):
+    ingest = OandaMinutePriceIngest(trading_calendar,
+                                    root_dir,
+                                    assets_path)
 
     with requests_mock.mock() as m:
         m.get(ingest.url(), json=candles)
@@ -81,5 +98,5 @@ def test_oanda_prices_ingest(candles, ohlcv_path, assets_path):
 
         eng = create_engine('sqlite:///{}'.format(assets_path))
         reader = AssetFinder(eng)
-        two = reader.retrieve_asset(37)
-        assert two.symbol == "EUR_USD"
+        eurusd = reader.retrieve_asset(37)
+        assert eurusd.symbol == "EUR_USD"
