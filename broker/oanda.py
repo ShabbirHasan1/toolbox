@@ -49,7 +49,8 @@ class Oanda(object):
         return self.inverse_ohlc_ratio[sid]
 
     def load_instruments_info(self):
-        with open('broker/oanda_instruments.json') as data_file:
+        dir_path = os.path.dirname(os.path.realpath(__file__))
+        with open('{}/oanda_instruments.json'.format(dir_path)) as data_file:
             self.instruments  = json.load(data_file)
             self.sid_sym_map  = {i['sid']: i['instrument'] for i in self.instruments}
             self.sym_sid_map  = {i['instrument']: i['sid'] for i in self.instruments}
