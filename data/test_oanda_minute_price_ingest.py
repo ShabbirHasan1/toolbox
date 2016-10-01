@@ -52,51 +52,35 @@ def candles():
 
 
 @pytest.fixture
-def ohlcv_path():
+def db_url():
     version = OandaMinutePriceIngest.VERSION
     root = os.environ.get("ZIPLINE_ROOT", "/home/.zipline")
-    return '{}/data/oanda/{}-{}/ohlcv.db' \
+    return 'sqlite:///{}/data/oanda/{}-{}/test.db' \
             .format(root, 'practice', version)
 
-@pytest.fixture
-def root_dir():
-    version = OandaMinutePriceIngest.VERSION
-    root = os.environ.get("ZIPLINE_ROOT", "/home/.zipline")
-    return '{}/data/oanda/{}-{}' \
-            .format(root, 'practice', version)
-
-@pytest.fixture
-def assets_path():
-    version = OandaMinutePriceIngest.VERSION
-    root = os.environ.get("ZIPLINE_ROOT", "/home/.zipline")
-    return '{}/data/oanda/{}-{}/assets.db' \
-            .format(root, 'practice', version)
 
 @pytest.fixture
 def trading_calendar():
     start = pd.Timestamp('2016-09-02', tz='utc')
     return ForexCalendar(start)
 
+
 def test_oanda_prices_ingest(candles,
                              trading_calendar,
-                             root_dir,
-                             assets_path):
-    ingest = OandaMinutePriceIngest(trading_calendar,
-                                    root_dir,
-                                    assets_path)
+                             db_url):
+    ingest = OandaMinutePriceIngest(db_url)
 
     with requests_mock.mock() as m:
         m.get(ingest.url(), json=candles)
 
         ingest.run("EUR_USD")
 
-        eng = create_engine('sqlite:///{}'.format(ohlcv_path))
+        eng = create_engine(db_url)
         c = eng.connect()
-        res = c.execute("SELECT count(*) from minute_bars_2")
+        res = c.execute("SELECT count(*) from minute_bars_37") # 37 is the sid for eur-usd
         assert res.fetchone()[0] > 2
         c.close()
 
-        eng = create_engine('sqlite:///{}'.format(assets_path))
         reader = AssetFinder(eng)
         eurusd = reader.retrieve_asset(37)
         assert eurusd.symbol == "EUR_USD"

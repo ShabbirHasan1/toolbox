@@ -1,4 +1,9 @@
-from zipline.assets.asset_db_schema import ASSET_DB_VERSION
+import pytest
+from zipline.assets.asset_db_schema import (
+    ASSET_DB_VERSION,
+    metadata
+)
+from zipline.assets.asset_db_schema import metadata
 
 import os
 import numpy as np
@@ -9,7 +14,9 @@ from sqlalchemy import (
     MetaData,
     Column,
     Integer,
-    String
+    String,
+    select,
+    exc
 )
 from ..broker import Oanda
 from zipline.assets import AssetDBWriter, AssetFinder, Equity
@@ -34,14 +41,12 @@ class OandaMinutePriceIngest():
 
     VERSION = 0
 
-    def __init__(self, ohlcv_path, assets_path):
+    def __init__(self, db_url):
         self.broker = Oanda(os.environ.get("OANADA_ACCOUNT_ID", "test"))
 
-        echo = os.environ.get("SQLITE_ECHO", False)
-        self.engine = create_engine('sqlite:///{}'.format(ohlcv_path),
+        echo = os.environ.get("SQL_ECHO", False)
+        self.engine = create_engine(db_url,
                                     echo=echo)
-        self.asset_engine = create_engine('sqlite:///{}'.format(assets_path),
-                                          echo=echo)
 
     def run(self, symbol, end=None):
         """
@@ -97,7 +102,15 @@ class OandaMinutePriceIngest():
                 support replacing.
           - And finally write the new asset info
         """
-        reader = AssetFinder(self.asset_engine)
+
+        try:
+            reader = AssetFinder(self.engine)
+        except exc.InvalidRequestError as err:
+            if 'Could not reflect' in str(err):
+                metadata.create_all(self.engine, checkfirst=True)
+                self._ensure_version()
+            reader = AssetFinder(self.engine)
+
         asset = reader.retrieve_asset(sid, default_none=True) \
                 or Equity(sid, "forex",
                           symbol=self.broker.symbol(sid),
@@ -118,8 +131,7 @@ class OandaMinutePriceIngest():
             self.asset_metadata.ix[sid, 'auto_close_date'] = index[-1] + pd.Timedelta(days=1)
 
         if changed:
-            writer = AssetDBWriter(self.asset_engine)
-            self._ensure_version()
+            writer = AssetDBWriter(self.engine)
             self._delete_existing_asset_metadata(sid)
             writer.write(equities=self.asset_metadata.dropna())
 
@@ -134,21 +146,28 @@ class OandaMinutePriceIngest():
         c.close()
 
     def _delete_existing_asset_metadata(self, sid):
-        metadata = MetaData(self.asset_engine, reflect=True)
-        c = self.asset_engine.connect()
+        meta = MetaData(self.engine, reflect=True)
+        c = self.engine.connect()
 
         for t in ['equities', 'equity_symbol_mappings', 'asset_router']:
-            table = metadata.tables[t]
+            table = meta.tables[t]
             c.execute(table.delete().where(table.c.sid == sid))
 
         c.close()
 
     def _ensure_version(self):
-        metadata = MetaData(self.asset_engine, reflect=True)
-        if 'version_info' not in metadata.tables:
-            write_version_info(self.asset_engine.connect(),
+        meta = MetaData(self.engine, reflect=True)
+        if 'version_info' not in meta.tables:
+            write_version_info(self.engine.connect(),
                                version_info,
                                ASSET_DB_VERSION)
+        else:
+            version_table = meta.tables['version_info']
+            version = self.engine.execute(select((version_table.c.version,))).scalar()
+            if not version:
+                write_version_info(self.engine.connect(),
+                                   version_info,
+                                   ASSET_DB_VERSION)
 
 
 def convert_price_to_int(df, ratio):
