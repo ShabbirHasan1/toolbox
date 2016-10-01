@@ -1,9 +1,5 @@
-import pytest
-from zipline.assets.asset_db_schema import (
-    ASSET_DB_VERSION,
-    metadata
-)
-from zipline.assets.asset_db_schema import metadata
+from ..zipline_extension.assets.asset_writer import AssetDBWriter
+from ..zipline_extension.assets import AssetFinder, Equity
 
 import os
 import numpy as np
@@ -19,9 +15,8 @@ from sqlalchemy import (
     exc
 )
 from ..broker import Oanda
-from zipline.assets import AssetDBWriter, AssetFinder, Equity
 from zipline.assets.asset_writer import write_version_info
-from zipline.assets.asset_db_schema import version_info
+from zipline.assets.asset_db_schema import version_info, metadata, ASSET_DB_VERSION
 
 
 class OandaMinutePriceIngest():
@@ -44,7 +39,7 @@ class OandaMinutePriceIngest():
     def __init__(self, db_url):
         self.broker = Oanda(os.environ.get("OANADA_ACCOUNT_ID", "test"))
 
-        echo = os.environ.get("SQL_ECHO", False)
+        echo = os.environ.get("SQL_ECHO", False) == 'true'
         self.engine = create_engine(db_url,
                                     echo=echo)
 
@@ -140,7 +135,7 @@ class OandaMinutePriceIngest():
 
     def _delete_duplicate_minutes(self, sid, df):
         c = self.engine.connect()
-        datetime_list = df.index.strftime("%Y-%m-%d %H:%M:%S.%f")
+        datetime_list = df.index.strftime("%Y-%m-%d %H:%M:%S")
         t = table(sid)
         c.execute(t.delete().where(t.c.datetime.in_(datetime_list)))
         c.close()
@@ -149,7 +144,7 @@ class OandaMinutePriceIngest():
         meta = MetaData(self.engine, reflect=True)
         c = self.engine.connect()
 
-        for t in ['equities', 'equity_symbol_mappings', 'asset_router']:
+        for t in ['equity_symbol_mappings', 'asset_router', 'equities']:
             table = meta.tables[t]
             c.execute(table.delete().where(table.c.sid == sid))
 

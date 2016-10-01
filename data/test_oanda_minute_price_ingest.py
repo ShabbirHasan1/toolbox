@@ -8,7 +8,7 @@ from datetime import datetime, timedelta
 
 from .oanda_minute_price_ingest import OandaMinutePriceIngest
 
-from zipline.assets import AssetFinder
+from ..zipline_extension.assets import AssetFinder
 
 
 @pytest.fixture
@@ -53,10 +53,7 @@ def candles():
 
 @pytest.fixture
 def db_url():
-    version = OandaMinutePriceIngest.VERSION
-    root = os.environ.get("ZIPLINE_ROOT", "/home/.zipline")
-    return 'sqlite:///{}/data/oanda/{}-{}/test.db' \
-            .format(root, 'practice', version)
+    return 'postgres://postgres:password@localhost:5435/test'
 
 
 @pytest.fixture

@@ -5,3 +5,5 @@ test:
     - ./zipline_root:/home/.zipline
   environment:
     - ZIPLINE_ROOT=/home/.zipline
+    - SQL_ECHO=true
+  net: "host"

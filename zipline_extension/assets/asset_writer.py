@@ -260,6 +260,27 @@ def _split_symbol_mappings(df):
     )
 
 
+def _dt_to_epoch_s(dt_series):
+    """Convert a timeseries into an Int64Index of seconds since the epoch.
+
+    Parameters
+    ----------
+    dt_series : pd.Series
+        The timeseries to convert.
+
+    Returns
+    -------
+    idx : pd.Int64Index
+        The index converted to seconds since the epoch.
+    """
+    index = pd.to_datetime(dt_series.values)
+    if index.tzinfo is None:
+        index = index.tz_localize('UTC')
+    else:
+        index = index.tz_convert('UTC')
+    return (index.view(np.int64) / 10e9).astype(int)
+
+
 def _dt_to_epoch_ns(dt_series):
     """Convert a timeseries into an Int64Index of nanoseconds since the epoch.
 
@@ -503,9 +524,11 @@ class AssetDBWriter(object):
             tbl = futures_contracts_table
             if mapping_data is not None:
                 raise TypeError('no mapping data expected for futures')
+            self._write_df_to_table(tbl, assets, txn, chunk_size)
 
         elif asset_type == 'equity':
             tbl = equities_table
+            self._write_df_to_table(tbl, assets, txn, chunk_size)
             if mapping_data is None:
                 raise TypeError('mapping data required for equities')
             # write the symbol mapping data.
@@ -523,7 +546,6 @@ class AssetDBWriter(object):
                 asset_type,
             )
 
-        self._write_df_to_table(tbl, assets, txn, chunk_size)
 
         pd.DataFrame({
             asset_router.c.sid.name: assets.index.values,
@@ -617,7 +639,7 @@ class AssetDBWriter(object):
                     'end_date',
                     'first_traded',
                     'auto_close_date'):
-            equities_output[col] = _dt_to_epoch_ns(equities_output[col])
+            equities_output[col] = _dt_to_epoch_s(equities_output[col])
 
         return _split_symbol_mappings(equities_output)
 
@@ -635,7 +657,7 @@ class AssetDBWriter(object):
                     'notice_date',
                     'expiration_date',
                     'auto_close_date'):
-            futures_output[col] = _dt_to_epoch_ns(futures_output[col])
+            futures_output[col] = _dt_to_epoch_s(futures_output[col])
 
         return futures_output
 
