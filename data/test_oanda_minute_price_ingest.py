@@ -53,7 +53,8 @@ def candles():
 
 @pytest.fixture
 def db_url():
-    return 'postgres://postgres:password@localhost:5435/test'
+    return os.environ.get('DATABASE_URL',
+                          'postgres://postgres:password@localhost:5435/test')
 
 
 @pytest.fixture

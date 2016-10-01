@@ -3,7 +3,5 @@ test:
   volumes:
     - ./:/usr/src/app/
     - ./zipline_root:/home/.zipline
-  environment:
-    - ZIPLINE_ROOT=/home/.zipline
-    - SQL_ECHO=true
+  env_file: test.env
   net: "host"
