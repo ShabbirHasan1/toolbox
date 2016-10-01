@@ -3,37 +3,32 @@ import numpy as np
 import pytest
 import pandas as pd
 from datetime import datetime, timedelta
+import requests_mock
 from sqlalchemy import create_engine
 
 from .oanda_data_portal import OandaMinuteReader, OandaDataPortal
 from ..zipline_extension import ForexCalendar
+from ..zipline_extension.assets import AssetFinder
+from ..zipline_extension.finance.trading import BernoullioTradingEnvironment
+
 from .oanda_minute_price_ingest import OandaMinutePriceIngest
 
-from zipline.assets import AssetFinder
 from zipline import TradingAlgorithm
 from zipline.finance.trading import SimulationParameters
-from zipline.finance.trading import TradingEnvironment
+
+# for the test algo
+from zipline.api import sid
 
 
 @pytest.fixture
-def ohlcv_path():
-    version = OandaMinutePriceIngest.VERSION
-    root = os.environ.get("ZIPLINE_ROOT", "/home/.zipline")
-    return '{}/data/oanda/{}-{}/ohlcv.db' \
-            .format(root, 'practice', version)
+def db_url():
+    return os.environ.get('DATABASE_URL',
+                          'postgres://postgres:password@localhost:5435/test')
 
 
 @pytest.fixture
-def assets_path():
-    version = OandaMinutePriceIngest.VERSION
-    root = os.environ.get("ZIPLINE_ROOT", "/home/.zipline")
-    return '{}/data/oanda/{}-{}/assets.db' \
-            .format(root, 'practice', version)
-
-
-@pytest.fixture
-def engine(assets_path):
-    return create_engine('sqlite:///{}'.format(assets_path), echo=True)
+def engine(db_url):
+    return create_engine(db_url, echo=False)
 
 
 @pytest.fixture
@@ -41,32 +36,49 @@ def asset_finder(engine):
     return AssetFinder(engine)
 
 
-@pytest.fixture
-def test_portal(ohlcv_path, calendar, asset_finder):
-    reader = OandaMinuteReader(ohlcv_path, calendar)
+def portal(calendar, asset_finder, db_url):
+    reader = OandaMinuteReader(db_url, calendar)
     return OandaDataPortal(minute_reader=reader,
                            asset_finder=asset_finder)
 
 
 def trading_env(engine, calendar):
-    return TradingEnvironment(asset_db_path=engine, trading_calendar=calendar)
+    return BernoullioTradingEnvironment(engine=engine, trading_calendar=calendar)
 
 
 @pytest.fixture
 def calendar():
-    now = pd.Timestamp.now(tz='utc')
-    now = now.replace(hour=0, minute=0, second=0, microsecond=0)
-    start = now - timedelta(days=7)
-    return ForexCalendar(start, now-timedelta(days=5))
+    start = pd.Timestamp(datetime(2015, 1, 2))
+    end = pd.Timestamp(datetime(2015, 1, 31))
+    return ForexCalendar(start, end)
 
 
-def test_oanda_data_portal(test_portal, ohlcv_path, assets_path, calendar):
+@pytest.fixture
+def candles():
+    df = pd.read_csv("fixtures/m1.csv",
+                     header=None,
+                     names=['date', 'time', 'openMid', 'highMid', 'lowMid', 'closeMid', 'volume'],
+                     parse_dates=[[0, 1]])
+    df['complete'] = True
+    df['time'] = df['date_time'].apply(lambda x: x.strftime("%Y-%m-%dT%H:%M:%S.%fZ"))
+    df = df.drop('date_time', 1)
 
-    ingest = OandaMinutePriceIngest(ohlcv_path, assets_path)
-    ingest.run("EUR_USD", calendar.schedule.index[-1])
+    return {
+        "instrument": "EUR_USD",
+        "granularity": "M1",
+        "candles": df.to_dict("records")}
+
+
+def test_oanda_data_portal(db_url, asset_finder, calendar, candles):
+
+    with requests_mock.mock() as m:
+        ingest = OandaMinutePriceIngest(db_url)
+        m.get(ingest.url(), json=candles)
+        ingest.run("EUR_USD", calendar.schedule.index[-1])
 
     def initialize(context):
         context.has_price = False
+        context.has_history = False
 
     def handle_data(context, data):
         if context.has_price is False and \
@@ -74,12 +86,18 @@ def test_oanda_data_portal(test_portal, ohlcv_path, assets_path, calendar):
                data[37]['volume'] is not np.NaN:
             context.has_price = True
 
+        if context.has_history is False:
+            hist = data.history(sid(37), ['close', 'open'], 20, '1m')
+            if hist:
+                context.has_history = True
+
     def analyze(context, perf):
         assert context.has_price
+        assert context.has_history
 
     algo = TradingAlgorithm(initialize=initialize,
                             handle_data=handle_data,
-                            env=trading_env(engine(assets_path), calendar),
+                            env=trading_env(engine(db_url), calendar),
                             sim_params=SimulationParameters(
                                 start_session=calendar.schedule.index[-1],
                                 end_session=calendar.schedule.index[-1],
@@ -88,4 +106,4 @@ def test_oanda_data_portal(test_portal, ohlcv_path, assets_path, calendar):
                                 emission_rate='minute',
                                 trading_calendar=calendar
                             ))
-    algo.run(test_portal)
+    algo.run(portal(calendar, asset_finder, db_url))
