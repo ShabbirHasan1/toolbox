@@ -11,6 +11,7 @@ from sqlalchemy import (
     Column,
     Integer,
     String,
+    DateTime,
     select,
     exc
 )
@@ -74,22 +75,22 @@ class OandaMinutePriceIngest():
 
         convert_price_to_int(df, self.broker.multiplier(symbol))
 
-        self._write_sid(self.broker.sid(symbol), df)
-        self._write_asset_info(self.broker.sid(symbol), df)
+        self._write_symbol(symbol, df)
+        self._write_asset_info(symbol, df)
 
     def url(self):
         return '%s/%s' % (self.broker.oanda.api_url, 'v1/candles')
 
-    def _write_sid(self, sid, df):
-        self._ensure_table(sid)
-        self._delete_duplicate_minutes(sid, df)
-        df.to_sql(name="minute_bars_{}".format(sid),
+    def _write_symbol(self, symbol, df):
+        self._ensure_table(symbol)
+        self._delete_duplicate_minutes(symbol, df)
+        df.to_sql(name="minute_bars_{}".format(symbol),
                   con=self.engine,
                   index_label="datetime",
                   dtype={"datetime": String(30)},
                   if_exists='append')
 
-    def _write_asset_info(self, sid, df):
+    def _write_asset_info(self, symbol, df):
         """
           - Loads existing asset info,
           - compares and update the date boundaries,
@@ -106,9 +107,10 @@ class OandaMinutePriceIngest():
                 self._ensure_version()
             reader = AssetFinder(self.engine)
 
+        sid = self.broker.sid(symbol)
         asset = reader.retrieve_asset(sid, default_none=True) \
                 or Equity(sid, "forex",
-                          symbol=self.broker.symbol(sid),
+                          symbol=symbol,
                           asset_name=self.broker.display_name(sid))
         self.asset_metadata = build_tzaware_metadata(asset)
 
@@ -130,13 +132,13 @@ class OandaMinutePriceIngest():
             self._delete_existing_asset_metadata(sid)
             writer.write(equities=self.asset_metadata.dropna())
 
-    def _ensure_table(self, sid):
-        table(sid).create(self.engine, checkfirst=True)
+    def _ensure_table(self, symbol):
+        table(symbol).create(self.engine, checkfirst=True)
 
-    def _delete_duplicate_minutes(self, sid, df):
+    def _delete_duplicate_minutes(self, symbol, df):
         c = self.engine.connect()
         datetime_list = df.index.strftime("%Y-%m-%d %H:%M:%S")
-        t = table(sid)
+        t = table(symbol)
         c.execute(t.delete().where(t.c.datetime.in_(datetime_list)))
         c.close()
 
@@ -172,10 +174,10 @@ def convert_price_to_int(df, ratio):
     df.close = (df.close * ratio).astype(int)
 
 
-def table(sid):
+def table(symbol):
     metadata = MetaData()
-    return Table('minute_bars_{}'.format(sid), metadata,
-                 Column('datetime', String(30), primary_key=True),
+    return Table('minute_bars_{}'.format(symbol), metadata,
+                 Column('datetime', DateTime, primary_key=True),
                  Column('open', Integer, nullable=False),
                  Column('high', Integer, nullable=False),
                  Column('low', Integer, nullable=False),
