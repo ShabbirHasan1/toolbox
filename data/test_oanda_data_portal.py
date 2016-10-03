@@ -72,14 +72,15 @@ def candles():
 
 def test_oanda_data_portal(db_url, asset_finder, calendar, candles):
 
-    with requests_mock.mock() as m:
-        ingest = OandaMinutePriceIngest(db_url)
-        m.get(ingest.url(), json=candles)
-        ingest.run("EUR_USD", calendar.schedule.index[-1])
+    # with requests_mock.mock() as m:
+        # ingest = OandaMinutePriceIngest(db_url)
+        # m.get(ingest.url(), json=candles)
+        # ingest.run("EUR_USD", calendar.schedule.index[-1])
 
     def initialize(context):
         context.has_price = False
         context.has_history = False
+        context.i = 0
 
     def handle_data(context, data):
         if context.has_price is False and \
@@ -88,9 +89,12 @@ def test_oanda_data_portal(db_url, asset_finder, calendar, candles):
             context.has_price = True
 
         if context.has_history is False:
-            hist = data.history(sid(37), ['close', 'open'], 20, '1m')
-            if hist is not None:
-                context.has_history = True
+            if context.i > 20:
+                hist = data.history(sid(37), ['close', 'open'], 20, '1m')
+                if hist is not None:
+                    context.has_history = True
+            else:
+                context.i += 1
 
     def analyze(context, perf):
         assert context.has_price
@@ -98,10 +102,11 @@ def test_oanda_data_portal(db_url, asset_finder, calendar, candles):
 
     algo = TradingAlgorithm(initialize=initialize,
                             handle_data=handle_data,
+                            trading_calendar=calendar,
                             env=trading_env(engine(db_url), calendar),
                             sim_params=SimulationParameters(
                                 start_session=calendar.schedule.index[0],
-                                end_session=calendar.schedule.index[-1],
+                                end_session=calendar.schedule.index[-2],
                                 capital_base=100,
                                 data_frequency='minute',
                                 emission_rate='minute',
