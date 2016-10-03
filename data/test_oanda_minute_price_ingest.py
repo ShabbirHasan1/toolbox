@@ -13,42 +13,19 @@ from ..zipline_extension.assets import AssetFinder
 
 @pytest.fixture
 def candles():
-    now = datetime.now()
-    m = now - timedelta(seconds=now.second,
-                        microseconds=now.microsecond)
+    df = pd.read_csv("fixtures/m1.csv",
+                     header=None,
+                     names=['symbol', 'date', 'time', 'openMid', 'highMid', 'lowMid', 'closeMid', 'volume'],
+                     parse_dates=[[1, 2]])
+    df['complete'] = True
+    df['time'] = df['date_time'].apply(lambda x: x.strftime("%Y-%m-%dT%H:%M:%S.%fZ"))
+    df = df.drop('date_time', 1)
+    df = df.drop('symbol', 1)
+
     return {
         "instrument": "EUR_USD",
         "granularity": "M1",
-        "candles": [
-            {
-                "time": (m-timedelta(minutes=2)).strftime("%Y-%m-%dT%H:%M:%S.%fZ"),
-                "openMid": 1.36803,
-                "highMid": 1.368125,
-                "lowMid": 1.364275,
-                "closeMid": 1.364315,
-                "volume": 28242,
-                "complete": True
-            },
-            {
-                "time": (m-timedelta(minutes=1)).strftime("%Y-%m-%dT%H:%M:%S.%fZ"),
-                "openMid": 1.36803,
-                "highMid": 1.368125,
-                "lowMid": 1.364275,
-                "closeMid": 1.365315,
-                "volume": 28242,
-                "complete": True
-            },
-            {
-                "time": m.strftime("%Y-%m-%dT%H:%M:%S.%fZ"),
-                "openMid": 1.36532,
-                "highMid": 1.366445,
-                "lowMid": 1.35963,
-                "closeMid": 1.3613,
-                "volume": 30487,
-                "complete": False
-            }
-        ]
-    }
+        "candles": df.to_dict("records")}
 
 
 @pytest.fixture
@@ -75,8 +52,8 @@ def test_oanda_prices_ingest(candles,
 
         eng = create_engine(db_url)
         c = eng.connect()
-        res = c.execute("SELECT count(*) from minute_bars_37") # 37 is the sid for eur-usd
-        assert res.fetchone()[0] > 2
+        res = c.execute('SELECT count(*) from "minute_bars_EUR_USD"')
+        assert res.fetchone()[0] == 30965
         c.close()
 
         reader = AssetFinder(eng)
