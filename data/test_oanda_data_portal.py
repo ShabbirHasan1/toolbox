@@ -48,8 +48,8 @@ def trading_env(engine, calendar):
 
 @pytest.fixture
 def calendar():
-    start = pd.Timestamp(datetime(2015, 1, 2))
-    end = pd.Timestamp(datetime(2015, 1, 31))
+    start = pd.Timestamp(datetime(2016, 9, 2))
+    end = pd.Timestamp(datetime(2016, 9, 30, 23, 59))
     return ForexCalendar(start, end)
 
 
@@ -57,11 +57,12 @@ def calendar():
 def candles():
     df = pd.read_csv("fixtures/m1.csv",
                      header=None,
-                     names=['date', 'time', 'openMid', 'highMid', 'lowMid', 'closeMid', 'volume'],
-                     parse_dates=[[0, 1]])
+                     names=['symbol', 'date', 'time', 'openMid', 'highMid', 'lowMid', 'closeMid', 'volume'],
+                     parse_dates=[[1, 2]])
     df['complete'] = True
     df['time'] = df['date_time'].apply(lambda x: x.strftime("%Y-%m-%dT%H:%M:%S.%fZ"))
     df = df.drop('date_time', 1)
+    df = df.drop('symbol', 1)
 
     return {
         "instrument": "EUR_USD",
@@ -88,7 +89,7 @@ def test_oanda_data_portal(db_url, asset_finder, calendar, candles):
 
         if context.has_history is False:
             hist = data.history(sid(37), ['close', 'open'], 20, '1m')
-            if hist:
+            if hist is not None:
                 context.has_history = True
 
     def analyze(context, perf):
@@ -99,7 +100,7 @@ def test_oanda_data_portal(db_url, asset_finder, calendar, candles):
                             handle_data=handle_data,
                             env=trading_env(engine(db_url), calendar),
                             sim_params=SimulationParameters(
-                                start_session=calendar.schedule.index[-1],
+                                start_session=calendar.schedule.index[0],
                                 end_session=calendar.schedule.index[-1],
                                 capital_base=100,
                                 data_frequency='minute',

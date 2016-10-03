@@ -8,7 +8,7 @@ from zipline.data.history_loader import MinuteHistoryLoader
 
 from sqlalchemy import (
     create_engine,
-    select,
+    select, and_,
     Table,
     MetaData,
     Column,
@@ -36,7 +36,6 @@ class OandaDataPortal(DataPortal):
         self._minute_history_loader = MinuteHistoryLoader(self.trading_calendar,
                                                           minute_reader,
                                                           None)
-        pytest.set_trace()
 
         self._first_trading_minute = self.trading_calendar.schedule.iloc[0]['market_open'].tz_localize("UTC")
 
@@ -60,7 +59,16 @@ class OandaMinuteReader(MinuteBarReader):
     def load_data_cache(self, sids):
         self._cache = {}
         for s in sids:
-            query = select([table(s)])
+            symbol = self.oanda.symbol(s)
+            s_table = table(symbol)
+            query = select([s_table]) \
+                        .where(
+                            and_(
+                                s_table.c.datetime >= self.trading_calendar.opens()[0], # Pending PR to remove method call
+                                s_table.c.datetime <= self.trading_calendar.closes[-1]
+                            )
+                        )
+
             self._cache[s] = pd.read_sql(query,
                                          self.engine,
                                          index_col='datetime',
@@ -72,7 +80,10 @@ class OandaMinuteReader(MinuteBarReader):
 
     @property
     def last_available_dt(self):
-        return self.days_of_data[-1]
+        s = self.days_of_data[-1].tz_localize("UTC") \
+                .replace(hour=0, minute=0)
+        (_, close) = self.trading_calendar.open_and_close_for_session(s)
+        return close
 
     @property
     def first_trading_day(self):
@@ -116,18 +127,26 @@ class OandaMinuteReader(MinuteBarReader):
             values for the respective field over start and end dt range.
         """
         results = []
+        # index = self._cache[sids[0]].index
+        # interested_period = index[start_dt:end_dt]
 
         for field in fields:
             df = pd.DataFrame()
             '''
-            if field != 'volume':
-                out = np.full(shape, np.nan)
-            else:
-                out = np.zeros(shape, dtype=np.uint32)
-            '''
+            # if field != 'volume':
+                # df = pd.DataFrame(np.nan,
+                                  # index=interested_period,
+                                  # columns=sids)
+            # else:
+                # df = pd.DataFrame(0,
+                                  # index=interested_period,
+                                  # columns=sids)
+                                  '''
             for s in sids:
                 df[s] = self._cache[s][start_dt:end_dt][field].copy()
-            results.append(df)
+            if field != 'volume':
+                df[s] = df[s] * self.oanda.float_multiplier(s)
+            results.append(df.as_matrix())
 
         return results
 
@@ -189,10 +208,9 @@ class OandaMinuteReader(MinuteBarReader):
         '''
 
 
-
-def table(sid):
+def table(symbol):
     metadata = MetaData()
-    return Table('minute_bars_{}'.format(sid), metadata,
+    return Table('minute_bars_{}'.format(symbol), metadata,
                  Column('datetime', String(30), primary_key=True),
                  Column('open', Integer, nullable=False),
                  Column('high', Integer, nullable=False),
