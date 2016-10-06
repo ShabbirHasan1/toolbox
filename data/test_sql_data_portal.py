@@ -2,11 +2,10 @@ import os
 import numpy as np
 import pytest
 import pandas as pd
-from datetime import datetime, timedelta
-import requests_mock
+from datetime import datetime
 from sqlalchemy import create_engine
 
-from .oanda_data_portal import SqlMinuteReader, SqlDataPortal
+from .sql_data_portal import SqlMinuteReader, SqlDataPortal
 from ..zipline_extension import ForexCalendar
 from ..zipline_extension.assets import AssetFinder
 from ..zipline_extension.finance.trading import BernoullioTradingEnvironment
@@ -38,7 +37,7 @@ def asset_finder(engine):
 
 def portal(reader, asset_finder):
     return SqlDataPortal(minute_reader=reader,
-                           asset_finder=asset_finder)
+                         asset_finder=asset_finder)
 
 
 def trading_env(engine):
@@ -69,7 +68,7 @@ def candles():
         "candles": df.to_dict("records")}
 
 
-def test_oanda_data_portal(db_url, asset_finder, calendar, candles):
+def test_sql_data_portal(db_url, asset_finder, calendar, candles):
 
     # with requests_mock.mock() as m:
         # ingest = OandaMinutePriceIngest(db_url)
