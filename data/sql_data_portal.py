@@ -151,63 +151,6 @@ class SqlMinuteReader(MinuteBarReader):
 
         return results
 
-        '''
-
-
-        shape = num_minutes, len(sids)
-
-        for field in fields:
-            if field != 'volume':
-                out = np.full(shape, np.nan)
-            else:
-                out = np.zeros(shape, dtype=np.uint32)
-
-
-
-        start_idx = self._find_position_of_minute(start_dt)
-        end_idx = self._find_position_of_minute(end_dt)
-
-        num_minutes = (end_idx - start_idx + 1)
-
-        results = []
-
-        indices_to_exclude = self._exclusion_indices_for_range(
-            start_idx, end_idx)
-        if indices_to_exclude is not None:
-            for excl_start, excl_stop in indices_to_exclude:
-                length = excl_stop - excl_start + 1
-                num_minutes -= length
-
-        shape = num_minutes, len(sids)
-
-        for field in fields:
-            if field != 'volume':
-                out = np.full(shape, np.nan)
-            else:
-                out = np.zeros(shape, dtype=np.uint32)
-
-            for i, sid in enumerate(sids):
-                carray = self._open_minute_file(field, sid)
-                values = carray[start_idx:end_idx + 1]
-                if indices_to_exclude is not None:
-                    for excl_start, excl_stop in indices_to_exclude[::-1]:
-                        excl_slice = np.s_[
-                            excl_start - start_idx:excl_stop - start_idx + 1]
-                        values = np.delete(values, excl_slice)
-
-                where = values != 0
-                # first slice down to len(where) because we might not have
-                # written data for all the minutes requested
-                if field != 'volume':
-                    out[:len(where), i][where] = (
-                        values[where] * self._ohlc_ratio_inverse_for_sid(sid))
-                else:
-                    out[:len(where), i][where] = values[where]
-
-            results.append(out)
-        return results
-        '''
-
 
 def table(symbol):
     metadata = MetaData()
