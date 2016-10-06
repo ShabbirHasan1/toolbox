@@ -19,7 +19,7 @@ class BernoullioTradingEnvironment(TradingEnvironment):
             load = load_market_data
 
         if not trading_calendar:
-            trading_calendar = get_calendar("forex")
+            trading_calendar = get_calendar("NYSE")
 
         self.benchmark_returns, self.treasury_curves = load(
             trading_calendar.day,

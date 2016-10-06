@@ -91,7 +91,7 @@ def ingest(environ,
         """
         instruments = os.listdir(path)  # get ["EURSD", "AUDUSD"]
         for index, name in enumerate(instruments):
-            metadata.ix[index] = None, None, None, 'forex', name, name
+            metadata.ix[index] = None, None, None, 'NYSE', name, name
             current_dir = os.path.join(path, name)
 
             zips = filter(lambda x: ".zip" in x, os.listdir(current_dir))
