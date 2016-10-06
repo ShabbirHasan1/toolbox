@@ -24,7 +24,7 @@ OHLCVP_FIELDS = frozenset([
 ])
 
 
-class OandaDataPortal(DataPortal):
+class SqlDataPortal(DataPortal):
     def __init__(self, minute_reader, asset_finder):
         self.asset_finder = asset_finder
         self.minute_reader = minute_reader
@@ -48,7 +48,7 @@ class OandaDataPortal(DataPortal):
                                                 field)
 
 
-class OandaMinuteReader(MinuteBarReader):
+class SqlMinuteReader(MinuteBarReader):
     def __init__(self, db_url, trading_calendar):
         echo = os.environ.get("SQL_ECHO", False) == 'true'
         self.engine = create_engine(db_url,

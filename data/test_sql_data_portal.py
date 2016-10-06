@@ -2,11 +2,10 @@ import os
 import numpy as np
 import pytest
 import pandas as pd
-from datetime import datetime, timedelta
-import requests_mock
+from datetime import datetime
 from sqlalchemy import create_engine
 
-from .oanda_data_portal import OandaMinuteReader, OandaDataPortal
+from .sql_data_portal import SqlMinuteReader, SqlDataPortal
 from ..zipline_extension import ForexCalendar
 from ..zipline_extension.assets import AssetFinder
 from ..zipline_extension.finance.trading import BernoullioTradingEnvironment
@@ -36,14 +35,13 @@ def asset_finder(engine):
     return AssetFinder(engine)
 
 
-def portal(calendar, asset_finder, db_url):
-    reader = OandaMinuteReader(db_url, calendar)
-    return OandaDataPortal(minute_reader=reader,
-                           asset_finder=asset_finder)
+def portal(reader, asset_finder):
+    return SqlDataPortal(minute_reader=reader,
+                         asset_finder=asset_finder)
 
 
-def trading_env(engine, calendar):
-    return BernoullioTradingEnvironment(engine=engine, trading_calendar=calendar)
+def trading_env(engine):
+    return BernoullioTradingEnvironment(engine=engine)
 
 
 @pytest.fixture
@@ -70,7 +68,7 @@ def candles():
         "candles": df.to_dict("records")}
 
 
-def test_oanda_data_portal(db_url, asset_finder, calendar, candles):
+def test_sql_data_portal(db_url, asset_finder, calendar, candles):
 
     # with requests_mock.mock() as m:
         # ingest = OandaMinutePriceIngest(db_url)
@@ -103,7 +101,8 @@ def test_oanda_data_portal(db_url, asset_finder, calendar, candles):
     algo = TradingAlgorithm(initialize=initialize,
                             handle_data=handle_data,
                             trading_calendar=calendar,
-                            env=trading_env(engine(db_url), calendar),
+                            analyze=analyze,
+                            env=trading_env(engine(db_url)),
                             sim_params=SimulationParameters(
                                 start_session=calendar.schedule.index[0],
                                 end_session=calendar.schedule.index[-2],
@@ -112,4 +111,5 @@ def test_oanda_data_portal(db_url, asset_finder, calendar, candles):
                                 emission_rate='minute',
                                 trading_calendar=calendar
                             ))
-    algo.run(portal(calendar, asset_finder, db_url))
+    reader = SqlMinuteReader(db_url, calendar)
+    algo.run(portal(reader, asset_finder))
