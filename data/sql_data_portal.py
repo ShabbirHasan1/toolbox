@@ -3,6 +3,7 @@ import pytest
 import pandas as pd
 import numpy as np
 from ..broker import Oanda
+from zipline.utils.calendars import get_calendar
 from zipline.data.data_portal import DataPortal
 from zipline.data.history_loader import MinuteHistoryLoader
 
@@ -49,11 +50,11 @@ class SqlDataPortal(DataPortal):
 
 
 class SqlMinuteReader(MinuteBarReader):
-    def __init__(self, db_url, trading_calendar):
+    def __init__(self, db_url, trading_calendar=None):
         echo = os.environ.get("SQL_ECHO", False) == 'true'
         self.engine = create_engine(db_url,
                                     echo=echo)
-        self.trading_calendar = trading_calendar
+        self.trading_calendar = trading_calendar or get_calendar("NYSE")
         self.oanda = Oanda(None)
 
     def load_data_cache(self, sids):

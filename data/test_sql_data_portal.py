@@ -111,5 +111,5 @@ def test_sql_data_portal(db_url, asset_finder, calendar, candles):
                                 emission_rate='minute',
                                 trading_calendar=calendar
                             ))
-    reader = SqlMinuteReader(db_url, calendar)
+    reader = SqlMinuteReader(db_url)
     algo.run(portal(reader, asset_finder))
