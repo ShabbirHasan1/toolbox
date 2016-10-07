@@ -1,14 +1,13 @@
 import os
 import pandas as pd
-from ..zipline_extension import ForexCalendar
 import pytest
 import requests_mock
 from sqlalchemy import create_engine
-from datetime import datetime, timedelta
 
 from .oanda_minute_price_ingest import OandaMinutePriceIngest
 
-from ..zipline_extension.assets import AssetFinder
+from zipline_extension import ForexCalendar
+from zipline_extension.assets import AssetFinder
 
 
 @pytest.fixture

@@ -11,7 +11,7 @@ from .simu_broker import (
     convert_order_params_for_blotter
 )
 
-from ..zipline_extension.execution import (
+from zipline_extension.execution import (
     BracketedLimitOrder,
     BracketedStopOrder,
     BracketedStopLimitOrder,

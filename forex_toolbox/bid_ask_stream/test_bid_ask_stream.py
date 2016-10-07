@@ -6,7 +6,7 @@ from . import bid_ask_stream
 from datetime import datetime, timedelta
 import pytz
 import pandas as pd
-from ..zipline_extension.calendars.exchange_calendar_forex import ForexCalendar
+from zipline_extension.calendars.exchange_calendar_forex import ForexCalendar
 from zipline.data.bundles import register, ingest
 from zipline.utils.calendars import register_calendar
 

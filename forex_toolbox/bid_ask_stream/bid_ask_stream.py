@@ -9,7 +9,7 @@ import re
 import zipfile
 import pandas as pd
 import numpy as np
-from ..utils import resample
+from utils import resample
 from zipline.utils.cli import maybe_show_progress
 
 

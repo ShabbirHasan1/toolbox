@@ -1,5 +1,5 @@
-from ..zipline_extension import BracketBlotter
-from ..zipline_extension.execution import (
+from zipline_extension import BracketBlotter
+from zipline_extension.execution import (
         BracketedLimitOrder,
         BracketedStopOrder,
         BracketedStopLimitOrder,
