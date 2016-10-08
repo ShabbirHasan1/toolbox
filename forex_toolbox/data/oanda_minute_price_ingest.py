@@ -1,5 +1,5 @@
-from zipline_extension.assets.asset_writer import AssetDBWriter
-from zipline_extension.assets import AssetFinder, Equity
+from ..zipline_extension.assets.asset_writer import AssetDBWriter
+from ..zipline_extension.assets import AssetFinder, Equity
 
 import os
 import numpy as np
@@ -15,7 +15,7 @@ from sqlalchemy import (
     select,
     exc
 )
-from broker import Oanda
+from ..broker import Oanda
 from zipline.assets.asset_writer import write_version_info
 from zipline.assets.asset_db_schema import version_info, metadata, ASSET_DB_VERSION
 

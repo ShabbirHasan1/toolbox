@@ -1,7 +1,7 @@
 import os
 import pandas as pd
 import numpy as np
-from broker import Oanda
+from ..broker import Oanda
 from zipline.utils.calendars import get_calendar
 from zipline.data.data_portal import DataPortal
 from zipline.data.history_loader import MinuteHistoryLoader

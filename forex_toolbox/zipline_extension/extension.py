@@ -1,5 +1,5 @@
 import os
-import bid_ask_stream
+from .. import bid_ask_stream
 from zipline.data.bundles import register
 from zipline.utils.calendars import register_calendar
 from .calendars.exchange_calendar_forex import ForexCalendar
