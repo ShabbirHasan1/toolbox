@@ -11,8 +11,7 @@ setup(
     author_email="skeang@gmail.com",
 
     # Packages
-    packages=["broker", "data", "bid_ask_stream",
-              "zipline_extension", "utils"],
+    packages=["forex_toolbox"],
 
     # Include additional files into the package
     include_package_data=True,
@@ -40,4 +39,3 @@ setup(
         'git+git://github.com/oanda/oandapy@master#egg=oandapy'
     ],
 )
-
