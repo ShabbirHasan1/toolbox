@@ -94,6 +94,8 @@ class SqlMinuteReader(MinuteBarReader):
         return self.days_of_data[-1]
 
     def get_value(self, sid, dt, field):
+        if field == 'price':
+            field = 'close'
         try:
             val = self._cache[sid].ix[dt, field]
         except KeyError:
