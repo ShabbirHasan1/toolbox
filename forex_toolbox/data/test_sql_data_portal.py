@@ -2,11 +2,12 @@ import os
 import numpy as np
 import pytest
 import pandas as pd
+import requests_mock
 from datetime import datetime
 from sqlalchemy import create_engine
 
 from .sql_data_portal import SqlMinuteReader, SqlDataPortal
-from zipline_extension import ForexCalendar
+from zipline_extension import override_nyse
 from zipline_extension.assets import AssetFinder
 from zipline_extension.finance.trading import BernoullioTradingEnvironment
 
@@ -14,6 +15,7 @@ from .oanda_minute_price_ingest import OandaMinutePriceIngest
 
 from zipline import TradingAlgorithm
 from zipline.finance.trading import SimulationParameters
+from zipline.utils.calendars import get_calendar
 
 # for the test algo
 from zipline.api import sid
@@ -45,13 +47,6 @@ def trading_env(engine):
 
 
 @pytest.fixture
-def calendar():
-    start = pd.Timestamp(datetime(2016, 9, 2))
-    end = pd.Timestamp(datetime(2016, 9, 30, 23, 59))
-    return ForexCalendar(start, end)
-
-
-@pytest.fixture
 def candles():
     df = pd.read_csv("fixtures/m1.csv",
                      header=None,
@@ -68,12 +63,14 @@ def candles():
         "candles": df.to_dict("records")}
 
 
-def test_sql_data_portal(db_url, asset_finder, calendar, candles):
+def test_sql_data_portal(db_url, asset_finder, candles):
 
-    # with requests_mock.mock() as m:
-        # ingest = OandaMinutePriceIngest(db_url)
-        # m.get(ingest.url(), json=candles)
-        # ingest.run("EUR_USD", calendar.schedule.index[-1])
+    start = pd.Timestamp(datetime(2016, 9, 2)).tz_localize('utc')
+    end = pd.Timestamp(datetime(2016, 9, 29, 23, 59)).tz_localize('utc')
+    with requests_mock.mock() as m:
+        ingest = OandaMinutePriceIngest(db_url)
+        m.get(ingest.url(), json=candles)
+        ingest.run("EUR_USD", start)
 
     def initialize(context):
         context.has_price = False
@@ -98,18 +95,18 @@ def test_sql_data_portal(db_url, asset_finder, calendar, candles):
         assert context.has_price
         assert context.has_history
 
+    override_nyse()
     algo = TradingAlgorithm(initialize=initialize,
                             handle_data=handle_data,
-                            trading_calendar=calendar,
                             analyze=analyze,
                             env=trading_env(engine(db_url)),
                             sim_params=SimulationParameters(
-                                start_session=calendar.schedule.index[0],
-                                end_session=calendar.schedule.index[-2],
+                                start_session=start,
+                                end_session=end,
                                 capital_base=100,
                                 data_frequency='minute',
                                 emission_rate='minute',
-                                trading_calendar=calendar
+                                trading_calendar=get_calendar('NYSE')
                             ))
     reader = SqlMinuteReader(db_url)
     algo.run(portal(reader, asset_finder))
