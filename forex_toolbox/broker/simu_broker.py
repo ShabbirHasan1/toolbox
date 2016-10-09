@@ -1,3 +1,4 @@
+import pytest
 import os
 from datetime import timedelta
 from ..zipline_extension import BracketBlotter
@@ -57,7 +58,14 @@ class SimuBroker(object):
         if not hasattr(self.sql_reader, '_cache') or sid not in self.sql_reader._cache:
             self.sql_reader.load_data_cache([sid])
         end_index = self.sql_reader._cache[instrument.sid].index.get_loc(end_dt)
-        df = self.sql_reader._cache[instrument.sid][end_index-count:end_index]
+        start_index = end_index - count * (time_delta(resolution)/timedelta(minutes=1))
+        start_index = int(start_index)
+        df = self.sql_reader._cache[instrument.sid][start_index:end_index]
+        df = df.resample(oanda_to_pandas(resolution)).agg({'open': 'first',
+                                                           'high': 'max',
+                                                           'low': 'min',
+                                                           'close': 'last',
+                                                           'volume': 'sum'})
         df.rename(columns={'open': 'openMid',
                            'high': 'highMid',
                            'low': 'lowMid',
@@ -178,3 +186,22 @@ def time_delta(resolution):
     return timedelta(minutes=h.get('M', 0),
                      seconds=h.get('S', 0),
                      hours=h.get('H', 0))
+
+
+def oanda_to_pandas(resolution):
+
+    """
+    Params
+    ------
+    resolution : string
+        "M1", "M15", etc
+
+    Returns
+    -------
+    string
+        pandas compatible resample frequency: "1Min", "1H", "5S"
+    """
+    f = "{}{}".format(resolution[1:], resolution[0])
+    if f != "M":
+        f = f.replace('M', 'Min')
+    return f

@@ -12,7 +12,8 @@ from zipline.testing.fixtures import (
 from .simu_broker import (
     SimuBroker,
     convert_order_params_for_blotter,
-    time_delta
+    time_delta,
+    oanda_to_pandas
 )
 
 from ..zipline_extension.execution import (
@@ -41,8 +42,9 @@ def test_get_history():
     df = broker.get_history(asset,
                             end_dt=pd.Timestamp("2016-09-20"),
                             count=1000,
-                            resolution='m15')
-    assert len(df) == 1000
+                            resolution='M15')
+    assert len(df) > 1000
+    assert df.index[2] - df.index[1] == pd.Timedelta(minutes=15)
     assert set(df.columns) == set(['openMid', 'highMid', 'lowMid', 'closeMid', 'volume'])
 
 
@@ -185,3 +187,10 @@ def test_time_delta():
     assert time_delta("M1") == timedelta(minutes=1)
     assert time_delta("M15") == timedelta(minutes=15)
     assert time_delta("S5") == timedelta(seconds=5)
+
+
+def test_oanda_to_pandas():
+    assert oanda_to_pandas("M1") == "1Min"
+    assert oanda_to_pandas("S5") == "5S"
+    assert oanda_to_pandas("H2") == "2H"
+    assert oanda_to_pandas("M") == "M"
