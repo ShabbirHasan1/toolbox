@@ -11,7 +11,7 @@ from .simu_broker import (
     convert_order_params_for_blotter
 )
 
-from zipline_extension.execution import (
+from ..zipline_extension.execution import (
     BracketedLimitOrder,
     BracketedStopOrder,
     BracketedStopLimitOrder,
@@ -57,6 +57,8 @@ class SimuBrokerTestCase(WithDataPortal,
             assert len(context.blotter.open_orders[symbol('A')]) == 0
             assert len(context.blotter.profit_orders[symbol('A')]) == 1
             assert len(context.blotter.loss_orders[symbol('A')]) == 0
+            assert context.portfolio.pnl > 0
+            assert context.portfolio.positions == {}
 
         algo = TradingAlgorithm(initialize=self.initialize,
                                 handle_data=handle_data,
@@ -88,6 +90,8 @@ class SimuBrokerTestCase(WithDataPortal,
             assert len(context.blotter.profit_orders[symbol('B')]) == 0
             assert len(context.blotter.loss_orders[symbol('B')]) == 1
             assert context.portfolio.positions[symbol('B')].amount == -2
+            assert context.portfolio.positions_value < 0
+            assert context.portfolio.pnl < 0
 
         algo = TradingAlgorithm(initialize=self.initialize,
                                 handle_data=handle_data,
