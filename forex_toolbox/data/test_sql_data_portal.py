@@ -7,9 +7,9 @@ from datetime import datetime
 from sqlalchemy import create_engine
 
 from .sql_data_portal import SqlMinuteReader, SqlDataPortal
-from zipline_extension import override_nyse
-from zipline_extension.assets import AssetFinder
-from zipline_extension.finance.trading import BernoullioTradingEnvironment
+from ..zipline_extension import override_nyse
+from ..zipline_extension.assets import AssetFinder
+from ..zipline_extension.finance.trading import BernoullioTradingEnvironment
 
 from .oanda_minute_price_ingest import OandaMinutePriceIngest
 
