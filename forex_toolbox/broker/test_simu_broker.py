@@ -1,3 +1,5 @@
+import pytest
+import pandas as pd
 from datetime import timedelta
 from zipline import TradingAlgorithm
 from zipline.testing.fixtures import (
@@ -28,6 +30,16 @@ from zipline.finance.execution import (
 )
 
 from zipline.api import symbol
+
+
+def test_get_history():
+    broker = SimuBroker(None)
+    df = broker.get_history("EUR_USD",
+                            end_dt=pd.Timestamp("2016-09-20"),
+                            count=1000,
+                            resolution='m15')
+    assert len(df) == 1000
+    assert set(['openMid', 'highMid', 'lowMid', 'closeMid', 'volume'])
 
 
 class SimuBrokerTestCase(WithDataPortal,
