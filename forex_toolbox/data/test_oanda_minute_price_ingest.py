@@ -6,8 +6,8 @@ from sqlalchemy import create_engine
 
 from .oanda_minute_price_ingest import OandaMinutePriceIngest
 
-from zipline_extension import ForexCalendar
-from zipline_extension.assets import AssetFinder
+from ..zipline_extension import ForexCalendar
+from ..zipline_extension.assets import AssetFinder
 
 
 @pytest.fixture
