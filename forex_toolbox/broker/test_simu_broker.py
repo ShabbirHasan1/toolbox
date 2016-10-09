@@ -44,6 +44,7 @@ def test_get_history():
                             count=1000,
                             resolution='M15')
     assert len(df) > 1000
+    assert df['openMid'].all() < 10
     assert df.index[2] - df.index[1] == pd.Timedelta(minutes=15)
     assert set(df.columns) == set(['openMid', 'highMid', 'lowMid', 'closeMid', 'volume'])
 

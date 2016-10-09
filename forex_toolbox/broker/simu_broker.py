@@ -1,4 +1,4 @@
-import pytest
+from .. import utils
 import os
 from datetime import timedelta
 from ..zipline_extension import BracketBlotter
@@ -29,7 +29,7 @@ class SimuBroker(object):
         return self._reader
 
     def get_history(self,
-                    instrument,
+                    instr,
                     end_dt=None,
                     count=500,
                     resolution='M1',
@@ -37,7 +37,7 @@ class SimuBroker(object):
         """
         Params
         ------
-        - instrument : zipline Asset. Responds to '.sid'
+        - instr : zipline Asset. Responds to '.sid'
 
         - end_dt : pandas.Timestamp
 
@@ -54,26 +54,30 @@ class SimuBroker(object):
            candles : pd.DataFrame
                Indexed by datetime and has columns: ['openMid', 'highMid', 'lowMid', 'closeMid']
         """
-        sid = instrument.sid
+        sid = instr.sid
         if not hasattr(self.sql_reader, '_cache') or sid not in self.sql_reader._cache:
             self.sql_reader.load_data_cache([sid])
-        end_index = self.sql_reader._cache[instrument.sid].index.get_loc(end_dt)
+        end_index = self.sql_reader._cache[instr.sid].index.get_loc(end_dt)
         start_index = end_index - count * (time_delta(resolution)/timedelta(minutes=1))
         start_index = int(start_index)
-        df = self.sql_reader._cache[instrument.sid][start_index:end_index]
+        df = self.sql_reader._cache[instr.sid][start_index:end_index]
         df = df.resample(oanda_to_pandas(resolution)).agg({'open': 'first',
                                                            'high': 'max',
                                                            'low': 'min',
                                                            'close': 'last',
                                                            'volume': 'sum'})
+        multiplier = utils.float_multiplier(instr.sid)
+        for field in ['open', 'high', 'low', 'close']:
+            df[field] = df[field] * multiplier
         df.rename(columns={'open': 'openMid',
                            'high': 'highMid',
                            'low': 'lowMid',
                            'close': 'closeMid'},
                   inplace=True)
+
         return df
 
-    def create_order(self, instrument, amount,
+    def create_order(self, instr, amount,
                      limit=None, stop=None, expiry=None,
                      stop_loss=None, take_profit=None, trailling=None):
         """
@@ -83,7 +87,7 @@ class SimuBroker(object):
 
         Parameters
         ----------
-        instrument: zipline Asset
+        instr: zipline Asset
             The equity to be ordered.
             Can be obtained from zipline_api.symbol("XX")
 
@@ -109,7 +113,7 @@ class SimuBroker(object):
         order_id: str
         A unique id for this order
         """
-        if not self.algo._can_order_asset(instrument):
+        if not self.algo._can_order_asset(instr):
             return None
 
         # Truncate to the integer share count that's either within .0001 of
@@ -119,7 +123,7 @@ class SimuBroker(object):
 
         # Raises a ZiplineError if invalid parameters are detected.
         # Also run the params through any registered trading_controls
-        self.algo.validate_order_params(instrument,
+        self.algo.validate_order_params(instr,
                                         amount,
                                         limit,
                                         stop, style=None)
@@ -131,7 +135,7 @@ class SimuBroker(object):
                                                  stop_loss,
                                                  take_profit,
                                                  trailling)
-        return self.blotter.order(instrument, amount, style)
+        return self.blotter.order(instr, amount, style)
 
 
 def convert_order_params_for_blotter(limit_price,
