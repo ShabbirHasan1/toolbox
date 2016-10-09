@@ -2,6 +2,11 @@ import os
 import json
 
 inverse_ohlc_ratio = None
+sym_sid_map = None
+sid_sym_map = None
+sid_name_map = None
+ohlc_ratio = None
+inverse_ohlc_ratio = None
 
 
 def sid(symbol):

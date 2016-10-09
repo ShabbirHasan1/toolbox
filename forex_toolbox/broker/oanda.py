@@ -23,41 +23,6 @@ class Oanda(object):
         self.oanda = oandapy.API(environment=os.getenv("OANDA_ENV", "practice"),
                                  access_token=os.getenv("OANDA_ACCESS_TOKEN", "xxx"))
 
-    def sid(self, symbol):
-        """
-        Returns the arbitrary id assigned to the instrument
-        symbol.
-
-        See broker/oanda_instruments.json
-
-        Return
-        ------
-        sid : int
-        """
-        return self.sym_sid_map[symbol]
-
-    def symbol(self, sid):
-        return self.sid_sym_map[sid]
-
-    def display_name(self, sid):
-        return self.sid_name_map[sid]
-
-    def multiplier(self, instrument):
-        return self.ohlc_ratio[instrument]
-
-    def float_multiplier(self, sid):
-        return self.inverse_ohlc_ratio[sid]
-
-    def load_instruments_info(self):
-        dir_path = os.path.dirname(os.path.realpath(__file__))
-        with open('{}/oanda_instruments.json'.format(dir_path)) as data_file:
-            self.instruments  = json.load(data_file)
-            self.sid_sym_map  = {i['sid']: i['instrument'] for i in self.instruments}
-            self.sym_sid_map  = {i['instrument']: i['sid'] for i in self.instruments}
-            self.sid_name_map = {i['sid']: i['displayName'] for i in self.instruments}
-            self.ohlc_ratio   = {i['instrument']: int(100 * 1 / float(i['pip'])) for i in self.instruments}
-            self.inverse_ohlc_ratio = {i['sid']: float(i['pip'])/100.0 for i in self.instruments}
-
     def create_order(self, instrument, amount,
                      limit=None, stop=None, expiry=None,
                      stop_loss=None, take_profit=None, trailling=None):

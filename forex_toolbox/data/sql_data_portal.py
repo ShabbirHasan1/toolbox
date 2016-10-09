@@ -1,7 +1,9 @@
 import os
 import pandas as pd
 import numpy as np
-from ..broker.oanda import Oanda
+
+from .. import utils
+
 from zipline.utils.calendars import get_calendar
 from zipline.data.data_portal import DataPortal
 from zipline.data.history_loader import MinuteHistoryLoader
@@ -54,12 +56,11 @@ class SqlMinuteReader(MinuteBarReader):
         self.engine = create_engine(db_url,
                                     echo=echo)
         self.trading_calendar = trading_calendar or get_calendar("NYSE")
-        self.oanda = Oanda(None)
 
     def load_data_cache(self, sids):
         self._cache = {}
         for s in sids:
-            symbol = self.oanda.symbol(s)
+            symbol = utils.symbol(s)
             s_table = table(symbol)
             query = select([s_table]) \
                         .where(
@@ -106,7 +107,7 @@ class SqlMinuteReader(MinuteBarReader):
         if field == 'volume':
             return int(val)
         else:
-            return int(val) * self.oanda.float_multiplier(sid)
+            return int(val) * utils.float_multiplier(sid)
 
     def load_raw_arrays(self, fields, start_dt, end_dt, sids):
         """
@@ -147,7 +148,7 @@ class SqlMinuteReader(MinuteBarReader):
             for s in sids:
                 df[s] = self._cache[s][start_dt:end_dt][field].copy()
             if field != 'volume':
-                df[s] = df[s] * self.oanda.float_multiplier(s)
+                df[s] = df[s] * utils.float_multiplier(s)
             results.append(df.as_matrix())
 
         return results
