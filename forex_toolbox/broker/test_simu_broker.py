@@ -39,7 +39,7 @@ def test_get_history():
                             count=1000,
                             resolution='m15')
     assert len(df) == 1000
-    assert set(['openMid', 'highMid', 'lowMid', 'closeMid', 'volume'])
+    assert set(df.columns) == set(['openMid', 'highMid', 'lowMid', 'closeMid', 'volume'])
 
 
 class SimuBrokerTestCase(WithDataPortal,

@@ -44,7 +44,13 @@ class SimuBroker(object):
         if not hasattr(self.sql_reader, '_cache') or sid not in self.sql_reader._cache:
             self.sql_reader.load_data_cache([sid])
         end_index = self.sql_reader._cache[self.sid(instrument)].index.get_loc(end_dt)
-        return self.sql_reader._cache[self.sid(instrument)][end_index-count:end_index]
+        df = self.sql_reader._cache[self.sid(instrument)][end_index-count:end_index]
+        df.rename(columns={'open': 'openMid',
+                           'high': 'highMid',
+                           'low': 'lowMid',
+                           'close': 'closeMid'},
+                  inplace=True)
+        return df
 
     def create_order(self, instrument, amount,
                      limit=None, stop=None, expiry=None,
