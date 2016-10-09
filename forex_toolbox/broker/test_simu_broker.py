@@ -30,11 +30,15 @@ from zipline.finance.execution import (
 )
 
 from zipline.api import symbol
+from zipline.assets import Asset
 
 
 def test_get_history():
     broker = SimuBroker(None)
-    df = broker.get_history("EUR_USD",
+    asset = Asset(37,
+                  symbol='EUR_USD',
+                  exchange='forex')
+    df = broker.get_history(asset,
                             end_dt=pd.Timestamp("2016-09-20"),
                             count=1000,
                             resolution='m15')
