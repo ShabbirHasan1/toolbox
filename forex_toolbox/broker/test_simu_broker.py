@@ -1,3 +1,4 @@
+from datetime import timedelta
 from zipline import TradingAlgorithm
 from zipline.testing.fixtures import (
     WithDataPortal,
@@ -8,7 +9,8 @@ from zipline.testing.fixtures import (
 
 from .simu_broker import (
     SimuBroker,
-    convert_order_params_for_blotter
+    convert_order_params_for_blotter,
+    time_delta
 )
 
 from ..zipline_extension.execution import (
@@ -161,3 +163,9 @@ def test_convert_order_params_for_blotter():
     assert convert_order_params_for_blotter(1, None, 3, 4, None).__class__ == BracketedLimitOrder
 
     assert convert_order_params_for_blotter(None, None, 3, 4, None).__class__ == BracketedMarketOrder
+
+
+def test_time_delta():
+    assert time_delta("M1") == timedelta(minutes=1)
+    assert time_delta("M15") == timedelta(minutes=15)
+    assert time_delta("S5") == timedelta(seconds=5)

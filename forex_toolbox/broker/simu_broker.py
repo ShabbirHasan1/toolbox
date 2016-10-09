@@ -1,3 +1,6 @@
+import pytest
+import os
+from datetime import timedelta
 from ..zipline_extension import BracketBlotter
 from ..zipline_extension.execution import (
         BracketedLimitOrder,
@@ -106,3 +109,26 @@ def convert_order_params_for_blotter(limit_price,
                                     stop_loss=stop_loss,
                                     take_profit=take_profit,
                                     trailling=trailling)
+
+
+def time_delta(resolution):
+    """
+    Params
+    ------
+    resolution : string
+        "M1", "M15", etc
+
+    Returns
+    -------
+    datetime.timedelta
+    """
+    h = {}
+    value = resolution[1:]
+    if value == '':
+        value = 1
+    else:
+        value = int(value)
+    h[resolution[0]] = value
+    return timedelta(minutes=h.get('M', 0),
+                     seconds=h.get('S', 0),
+                     hours=h.get('H', 0))
