@@ -26,7 +26,10 @@ OHLCVP_FIELDS = frozenset([
 ])
 
 
+VOLUME_MULTIPLIER = 10000
+
 class SqlDataPortal(DataPortal):
+
     def __init__(self, minute_reader, asset_finder):
         self.asset_finder = asset_finder
         self.minute_reader = minute_reader
@@ -105,7 +108,7 @@ class SqlMinuteReader(MinuteBarReader):
             else:
                 return np.nan
         if field == 'volume':
-            return int(val)
+            return int(val) * VOLUME_MULTIPLIER
         else:
             return int(val) * utils.float_multiplier(sid)
 
@@ -149,6 +152,8 @@ class SqlMinuteReader(MinuteBarReader):
                 df[s] = self._cache[s][start_dt:end_dt][field].copy()
             if field != 'volume':
                 df[s] = df[s] * utils.float_multiplier(s)
+            else:
+                df[s] = df[s] * VOLUME_MULTIPLIER
             results.append(df.as_matrix())
 
         return results

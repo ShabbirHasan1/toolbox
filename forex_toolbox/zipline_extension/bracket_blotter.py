@@ -126,7 +126,6 @@ class BracketBlotter(Blotter):
         closed_orders: List
             closed_orders: list of all the orders that have filled.
         """
-
         closed_orders = []
         transactions = []
         commissions = []
