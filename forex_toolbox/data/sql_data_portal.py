@@ -138,16 +138,6 @@ class SqlMinuteReader(MinuteBarReader):
 
         for field in fields:
             df = pd.DataFrame()
-            '''
-            # if field != 'volume':
-                # df = pd.DataFrame(np.nan,
-                                  # index=interested_period,
-                                  # columns=sids)
-            # else:
-                # df = pd.DataFrame(0,
-                                  # index=interested_period,
-                                  # columns=sids)
-                                  '''
             for s in sids:
                 df[s] = self._cache[s][start_dt:end_dt][field].copy()
             if field != 'volume':
