@@ -1,3 +1,4 @@
+import pytest
 # Copyright 2016 Quantopian, Inc.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -115,7 +116,7 @@ def _convert_asset_timestamp_fields(dict_):
     Takes in a dict of Asset init args and converts dates to pd.Timestamps
     """
     for key in _asset_timestamp_fields & viewkeys(dict_):
-        value = pd.Timestamp(dict_[key], tz='UTC')
+        value = pd.Timestamp(dict_[key]*10e9, tz='UTC')
         dict_[key] = None if isnull(value) else value
     return dict_
 
