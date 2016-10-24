@@ -71,7 +71,7 @@ class SqlMinuteReader(MinuteBarReader):
                                 s_table.c.datetime >= self.trading_calendar.opens()[0], # Pending PR to remove method call
                                 s_table.c.datetime <= self.trading_calendar.closes[-1]
                             )
-                        )
+                        ).order_by(s_table.c.datetime)
 
             self._cache[s] = pd.read_sql(query,
                                          self.engine,

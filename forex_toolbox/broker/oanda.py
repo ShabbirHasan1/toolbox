@@ -19,7 +19,6 @@ class Oanda(object):
 
     def __init__(self, id):
         self.id = id
-        self.load_instruments_info()
         self.oanda = oandapy.API(environment=os.getenv("OANDA_ENV", "practice"),
                                  access_token=os.getenv("OANDA_ACCESS_TOKEN", "xxx"))
 

@@ -16,6 +16,7 @@ from sqlalchemy import (
     exc
 )
 from ..broker import Oanda
+from .. import utils
 from zipline.assets.asset_writer import write_version_info
 from zipline.assets.asset_db_schema import version_info, metadata, ASSET_DB_VERSION
 
@@ -73,7 +74,7 @@ class OandaMinutePriceIngest():
                   inplace=True)
         df = df[['open', 'high', 'low', 'close', 'volume']]
 
-        convert_price_to_int(df, self.broker.multiplier(symbol))
+        convert_price_to_int(df, utils.multiplier(symbol))
 
         self._write_symbol(symbol, df)
         self._write_asset_info(symbol, df)
@@ -107,11 +108,11 @@ class OandaMinutePriceIngest():
                 self._ensure_version()
             reader = AssetFinder(self.engine)
 
-        sid = self.broker.sid(symbol)
+        sid = utils.sid(symbol)
         asset = reader.retrieve_asset(sid, default_none=True) \
                 or Equity(sid, "forex",
                           symbol=symbol,
-                          asset_name=self.broker.display_name(sid))
+                          asset_name=utils.display_name(sid))
         self.asset_metadata = build_tzaware_metadata(asset)
 
         # Construct a tz-aware index, for date comparison
@@ -130,6 +131,9 @@ class OandaMinutePriceIngest():
         if changed:
             writer = AssetDBWriter(self.engine)
             self._delete_existing_asset_metadata(sid)
+            self.asset_metadata['start_date'] = self.asset_metadata.start_date.dt.date
+            self.asset_metadata['end_date'] = self.asset_metadata.end_date.dt.date
+            self.asset_metadata['auto_close_date'] = self.asset_metadata.auto_close_date.dt.date
             writer.write(equities=self.asset_metadata.dropna())
 
     def _ensure_table(self, symbol):

@@ -25,13 +25,14 @@ class SimuBroker(object):
     @property
     def sql_reader(self):
         if not hasattr(self, "_reader"):
-            self._reader = SqlMinuteReader(os.environ.get("DATABASE_URL"))
+            self._reader = self.algo.data_portal.minute_reader
         return self._reader
 
     def get_history(self,
                     instr,
                     end_dt=None,
-                    count=500,
+                    start_dt=None,
+                    count=None,
                     resolution='M1',
                     candleFormat='midpoint'):
         """
@@ -41,7 +42,11 @@ class SimuBroker(object):
 
         - end_dt : pandas.Timestamp
 
+        - start_dt : pandas.Timestamp
+            Optioanl, either give start_dt or count
+
         - count : int
+            Optioanl, either give start_dt or count
 
         - resolution : string
             Oanda's resolution flags, "M1", "M5", "H2", "H6", etc
@@ -57,9 +62,17 @@ class SimuBroker(object):
         sid = instr.sid
         if not hasattr(self.sql_reader, '_cache') or sid not in self.sql_reader._cache:
             self.sql_reader.load_data_cache([sid])
+
+        if end_dt not in self.sql_reader._cache[instr.sid].index:
+            return None
+
         end_index = self.sql_reader._cache[instr.sid].index.get_loc(end_dt)
-        start_index = end_index - count * (time_delta(resolution)/timedelta(minutes=1))
-        start_index = int(start_index)
+        if count:
+            start_index = end_index - count * (time_delta(resolution)/timedelta(minutes=1))
+            start_index = int(start_index)
+        elif start_dt:
+            start_index = self.sql_reader._cache[instr.sid].index.get_loc(start_dt)
+
         df = self.sql_reader._cache[instr.sid][start_index:end_index]
         df = df.resample(oanda_to_pandas(resolution)).agg({'open': 'first',
                                                            'high': 'max',

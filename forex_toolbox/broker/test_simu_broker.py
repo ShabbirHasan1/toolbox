@@ -70,9 +70,9 @@ class SimuBrokerTestCase(WithDataPortal,
                 context.ordered = True
 
                 # Asset A filled, profit taken
-                context.broker.create_order(a, 1, stop=100,
+                context.broker.create_order(a, 1,
                                             take_profit=102,
-                                            stop_loss=98)
+                                            stop_loss=8)
 
         def analyze(context, perf):
             assert len(context.blotter.open_orders[symbol('A')]) == 0
