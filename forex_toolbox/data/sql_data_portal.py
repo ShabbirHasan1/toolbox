@@ -26,7 +26,7 @@ OHLCVP_FIELDS = frozenset([
 ])
 
 
-VOLUME_MULTIPLIER = 10000
+VOLUME_MULTIPLIER = 1000000000
 
 class SqlDataPortal(DataPortal):
 

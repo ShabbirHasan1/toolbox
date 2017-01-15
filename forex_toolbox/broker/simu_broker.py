@@ -1,5 +1,6 @@
 from .. import utils
 import os
+import pandas as pd
 from datetime import timedelta
 from ..zipline_extension import BracketBlotter
 from ..zipline_extension.execution import (
@@ -8,11 +9,13 @@ from ..zipline_extension.execution import (
         BracketedStopLimitOrder,
         BracketedMarketOrder
 )
+from zipline.finance.cancel_policy import NeverCancel
 from zipline.utils.math_utils import (
         round_if_near_integer
 )
 
 from ..data.sql_data_portal import SqlMinuteReader
+from zipline.finance.commission import PerShare
 
 
 class SimuBroker(object):
@@ -21,7 +24,9 @@ class SimuBroker(object):
         if self.algo is not None:
             self._reader = self.algo.data_portal.minute_reader
             self.blotter = BracketBlotter(algo.blotter.data_frequency,
-                                          algo.blotter.asset_finder)
+                                          algo.blotter.asset_finder,
+                                          commission=PerShare(cost=0.00003, min_trade_cost=None),
+                                          cancel_policy=NeverCancel())
 
     @property
     def sql_reader(self):
