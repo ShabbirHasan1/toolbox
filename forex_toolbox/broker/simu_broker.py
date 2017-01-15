@@ -19,13 +19,16 @@ class SimuBroker(object):
     def __init__(self, algo):
         self.algo = algo
         if self.algo is not None:
+            self._reader = self.algo.data_portal.minute_reader
             self.blotter = BracketBlotter(algo.blotter.data_frequency,
                                           algo.blotter.asset_finder)
 
     @property
     def sql_reader(self):
         if not hasattr(self, "_reader"):
-            self._reader = self.algo.data_portal.minute_reader
+            db_url = os.environ.get('DATABASE_URL',
+                                    'postgres://postgres:password@localhost:5435/test')
+            self._reader = SqlMinuteReader(db_url)
         return self._reader
 
     def get_history(self,
@@ -71,7 +74,10 @@ class SimuBroker(object):
             start_index = end_index - count * (time_delta(resolution)/timedelta(minutes=1))
             start_index = int(start_index)
         elif start_dt:
-            start_index = self.sql_reader._cache[instr.sid].index.get_loc(start_dt)
+            cache = self.sql_reader._cache[instr.sid]
+            while start_dt not in cache.index:
+                start_dt = start_dt - pd.DateOffset(minutes=1)
+            start_index = cache.index.get_loc(start_dt)
 
         df = self.sql_reader._cache[instr.sid][start_index:end_index]
         df = df.resample(oanda_to_pandas(resolution)).agg({'open': 'first',
@@ -79,6 +85,7 @@ class SimuBroker(object):
                                                            'low': 'min',
                                                            'close': 'last',
                                                            'volume': 'sum'})
+        df['volume'] = df['volume'] * 100000000
         multiplier = utils.float_multiplier(instr.sid)
         for field in ['open', 'high', 'low', 'close']:
             df[field] = df[field] * multiplier
