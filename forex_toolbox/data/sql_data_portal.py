@@ -60,16 +60,20 @@ class SqlMinuteReader(MinuteBarReader):
                                     echo=echo)
         self.trading_calendar = trading_calendar or get_calendar("NYSE")
 
-    def load_data_cache(self, sids):
+    def load_data_cache(self, sids, start=None, end=None):
         self._cache = {}
+        if start is None:
+            start = self.trading_calendar.opens()[0]  # Pending PR to remove method call
+        if end is None:
+            end = self.trading_calendar.closes[1]
         for s in sids:
             symbol = utils.symbol(s)
             s_table = table(symbol)
             query = select([s_table]) \
                         .where(
                             and_(
-                                s_table.c.datetime >= self.trading_calendar.opens()[0], # Pending PR to remove method call
-                                s_table.c.datetime <= self.trading_calendar.closes[-1]
+                                s_table.c.datetime >= start,
+                                s_table.c.datetime <= end
                             )
                         ).order_by(s_table.c.datetime)
 

@@ -43,7 +43,8 @@ class SimuBroker(object):
                     start_dt=None,
                     count=None,
                     resolution='M1',
-                    candleFormat='midpoint'):
+                    candleFormat='midpoint',
+                    conserve_mem=False):
         """
         Params
         ------
@@ -70,7 +71,10 @@ class SimuBroker(object):
         """
         sid = instr.sid
         if not hasattr(self.sql_reader, '_cache') or sid not in self.sql_reader._cache:
-            self.sql_reader.load_data_cache([sid])
+            if conserve_mem:
+                self.sql_reader.load_data_cache([sid], start=start_dt, end=end_dt)
+            else:
+                self.sql_reader.load_data_cache([sid])
 
         if end_dt not in self.sql_reader._cache[instr.sid].index:
             return None
