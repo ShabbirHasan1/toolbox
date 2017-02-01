@@ -1,4 +1,4 @@
-import pytest
+import os
 import pandas as pd
 from datetime import timedelta
 from zipline import TradingAlgorithm
@@ -33,6 +33,8 @@ from zipline.finance.execution import (
 from zipline.api import symbol
 from zipline.assets import Asset
 
+from ..data.sql_data_portal import SqlMinuteReader
+
 
 def test_get_history():
     broker = SimuBroker(None)
@@ -40,12 +42,12 @@ def test_get_history():
                   symbol='EUR_USD',
                   exchange='forex')
     df = broker.get_history(asset,
-                            end_dt=pd.Timestamp("2016-09-20"),
+                            end_dt=pd.Timestamp("2013-07-31"),
                             count=1000,
-                            resolution='M15')
+                            resolution='M5')
     assert len(df) > 1000
     assert df['openMid'].all() < 10
-    assert df.index[2] - df.index[1] == pd.Timedelta(minutes=15)
+    assert df.index[2] - df.index[1] == pd.Timedelta(minutes=5)
     assert set(df.columns) == set(['openMid', 'highMid', 'lowMid', 'closeMid', 'volume'])
 
 
@@ -55,7 +57,9 @@ class SimuBrokerTestCase(WithDataPortal,
                          ZiplineTestCase):
 
     def initialize(self, context):
-        context.broker = SimuBroker(context)
+        db_url = os.environ.get('DATABASE_URL',
+                                'postgres://postgres:password@localhost:5435/forex_test')
+        context.broker = SimuBroker(context, reader=SqlMinuteReader(db_url))
         context.blotter = context.broker.blotter
 
     def test_take_profit(self):

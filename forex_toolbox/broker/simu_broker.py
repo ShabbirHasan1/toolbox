@@ -19,10 +19,11 @@ from zipline.finance.commission import PerShare
 
 
 class SimuBroker(object):
-    def __init__(self, algo):
+    def __init__(self, algo, reader=None):
         self.algo = algo
         if self.algo is not None:
-            self._reader = self.algo.data_portal.minute_reader
+            if reader is None:
+                self._reader = self.algo.data_portal.minute_reader
             self.blotter = BracketBlotter(algo.blotter.data_frequency,
                                           algo.blotter.asset_finder,
                                           commission=PerShare(cost=0.00003, min_trade_cost=None),
