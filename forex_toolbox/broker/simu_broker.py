@@ -44,7 +44,8 @@ class SimuBroker(object):
                     count=None,
                     resolution='M1',
                     candleFormat='midpoint',
-                    conserve_mem=False):
+                    conserve_mem=False,
+                    fuzzy=False):
         """
         Params
         ------
@@ -64,29 +65,43 @@ class SimuBroker(object):
         - candleFormat: string
             Simu broker only supports 'midpoint' for now. Live broker this can
             be 'bidask'
+
+        - conserve_mem: bool
+            If true, only queries database for the specified dates, instead of
+            preloading all cache
+
+        - fuzzy: bool
+            If true, start_dt and end_dt do not need to match existing records
         Returns
         -------
            candles : pd.DataFrame
                Indexed by datetime and has columns: ['openMid', 'highMid', 'lowMid', 'closeMid']
         """
         sid = instr.sid
-        if not hasattr(self.sql_reader, '_cache') or sid not in self.sql_reader._cache:
-            if conserve_mem:
-                self.sql_reader.load_data_cache([sid], start=start_dt, end=end_dt)
-            else:
+        if conserve_mem:
+            self.sql_reader.load_data_cache([sid], start=start_dt, end=end_dt)
+        else:
+            if not hasattr(self.sql_reader, '_cache') or sid not in self.sql_reader._cache:
                 self.sql_reader.load_data_cache([sid])
 
-        if end_dt not in self.sql_reader._cache[instr.sid].index:
+        cache = self.sql_reader._cache[instr.sid]
+        if end_dt not in cache.index and not fuzzy:
             return None
 
-        end_index = self.sql_reader._cache[instr.sid].index.get_loc(end_dt)
+        while end_dt not in cache.index:
+            end_dt = end_dt - time_delta(resolution)
+        end_index = cache.index.get_loc(end_dt)
+
         if count:
             start_index = end_index - count * (time_delta(resolution)/timedelta(minutes=1))
             start_index = int(start_index)
         elif start_dt:
             cache = self.sql_reader._cache[instr.sid]
             while start_dt not in cache.index:
-                start_dt = start_dt - pd.DateOffset(minutes=1)
+                if conserve_mem:
+                    start_dt = start_dt + time_delta(resolution)
+                else:
+                    start_dt = start_dt - time_delta(resolution)
             start_index = cache.index.get_loc(start_dt)
 
         df = self.sql_reader._cache[instr.sid][start_index:end_index]

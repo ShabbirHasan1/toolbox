@@ -44,6 +44,8 @@ def test_get_history():
     df = broker.get_history(asset,
                             end_dt=pd.Timestamp("2013-07-31"),
                             count=1000,
+                            conserve_mem=True,
+                            fuzzy=True,
                             resolution='M5')
     assert len(df) > 1000
     assert df['openMid'].all() < 10
