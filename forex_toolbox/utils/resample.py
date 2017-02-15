@@ -31,3 +31,19 @@ def bid_ask_to_ohlc(path):
     ohlcv['volume'] = df.mid.resample('1Min').count()
     ohlcv.index = ohlcv.index.tz_localize('UTC')
     return ohlcv
+
+
+def range_bars(prices, pips=5, pip_size=1e-4):
+    int_prices = (prices / pip_size).round(0).astype(int)
+    range_bars = [int_prices.loc[0]]
+
+    for price in int_prices:
+        change = price - range_bars[-1]
+        while change > pips:
+            range_bars.append(range_bars[-1] + pips + 1)
+            change -= pips - 1
+        while change < -pips:
+            range_bars.append(range_bars[-1] - pips - 1)
+            change += pips + 1
+
+    return pd.Series(range_bars) * pip_size
