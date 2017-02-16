@@ -15,7 +15,7 @@ def test_bid_ask_to_ohlc():
 
 
 def test_range_bars():
-    expected = pd.read_csv("fixtures/range_3pips_for_m1_head.csv")['0']
+    expected = pd.read_csv("fixtures/range_3pips_for_m1_head.csv")['expected']
     candles = pd.read_csv("fixtures/m1.csv",
                           names=['symbol', 'date', 'time', 'open', 'high', 'low', 'close', 'volume'],
                           parse_dates=[[1, 2]])
