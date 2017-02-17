@@ -23,4 +23,17 @@ def test_range_bars():
 
     range_candles = resample.range_bars(candles.close, pips=3, pip_size=1e-4)
 
-    assert pd.Series.all(expected.iloc[0:10].round(4) == range_candles[0:10].round(4))
+    assert (expected.iloc[0:10] == range_candles[0:10]).all()
+
+
+def test_collapse():
+    expected = pd.read_csv("fixtures/collapsed_range_3pips_for_m1_head.csv")['expected']
+    candles = pd.read_csv("fixtures/m1.csv",
+                          names=['symbol', 'date', 'time', 'open', 'high', 'low', 'close', 'volume'],
+                          parse_dates=[[1, 2]])
+    candles = candles[['open', 'high', 'low', 'close']]
+
+    range_candles = resample.range_bars(candles.close, pips=3, pip_size=1e-4)
+    collapsed = resample.collapse(range_candles[0:14])
+
+    assert (expected == collapsed).all()

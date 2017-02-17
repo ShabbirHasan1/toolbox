@@ -1,3 +1,4 @@
+import numpy as np
 import pytest
 """
 Convert other format into ohlc bars
@@ -36,7 +37,7 @@ def bid_ask_to_ohlc(path):
 
 def range_bars(prices, pips=5, pip_size=1e-4):
     int_prices = (prices / pip_size).round(0).astype(int)
-    range_bars = [-1]
+    range_bars = [0]
     current_level = int_prices[0]
 
     for price in int_prices:
@@ -51,3 +52,16 @@ def range_bars(prices, pips=5, pip_size=1e-4):
             current_level -= pips + 1
 
     return pd.Series(range_bars[1:])
+
+
+def collapse(input_bars):
+    bars = input_bars.copy()
+    bars[bars==0] = -1
+    res = np.array([1])
+    for x in bars:
+        if x ^ res[-1] >= 0:
+            res[-1] += x
+        else:
+            res = np.append(res, x)
+    res[0] = 0
+    return res
