@@ -1,6 +1,15 @@
 import pytest
 import pandas as pd
-from ..forex_toolbox.indicators.ikh import lines_data
+from ..forex_toolbox.indicators.ikh import *
+
+
+def test_mark_signal():
+    data = pd.read_csv("fixtures/range_ikh.csv")
+    data = mark_signal(data)
+    print("Buy:")
+    print(data.loc[data['buy']==1])
+    print("Sell:")
+    print(data.loc[data['sell']==1])
 
 
 def test_lines_data():
