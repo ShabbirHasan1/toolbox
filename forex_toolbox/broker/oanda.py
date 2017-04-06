@@ -28,8 +28,8 @@ class Oanda(object):
         logging.info("#get_account params=%s response=%s" % (params, response))
         return response
 
-    def create_order(self, instrument, amount,
-                     limit=None, stop=None, expiry=None,
+    def create_order(self, instrument, amount, order_type='market',
+                     lower_bound=None, upper_bound=None, expiry=None,
                      stop_loss=None, take_profit=None, trailling=None):
         """
         Creates an order with Oanda rest api.
@@ -45,29 +45,10 @@ class Oanda(object):
 
         if amount < 0:
             side = "sell"
-            lower_bound = stop
-            upper_bound = limit
             touch_price = upper_bound
         else:
             side = "buy"
-            lower_bound = limit
-            upper_bound = stop
             touch_price = lower_bound
-
-        order_type = ""
-        if stop and limit:
-            # For oanda, there's no explicit "stop limit order" type
-            # So we use "market if touch", but set upper and lower bound
-            order_type = "marketIfTouched"
-        elif stop:
-            order_type = "stop"
-            touch_price = stop
-        elif limit:
-            order_type = "limit"
-            touch_price = limit
-        else:
-            order_type = "market"
-            touch_price = None
 
         params = {"account_id": self.id,
                   "instrument": instrument.symbol,
@@ -75,7 +56,7 @@ class Oanda(object):
                   "side":       side,
                   "type":       order_type}
 
-        if touch_price:
+        if touch_price and order_type != 'market':
             params["price"] = touch_price
 
         if expiry is not None:
