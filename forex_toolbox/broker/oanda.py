@@ -22,6 +22,12 @@ class Oanda(object):
         self.oanda = oandapy.API(environment=os.getenv("OANDA_ENV", "practice"),
                                  access_token=os.getenv("OANDA_ACCESS_TOKEN", "xxx"))
 
+    def get_account(self):
+        params = {"account_id": self.id}
+        response = self.oanda.get_account(**params)
+        logging.info("#get_account params=%s response=%s" % (params, response))
+        return response
+
     def create_order(self, instrument, amount,
                      limit=None, stop=None, expiry=None,
                      stop_loss=None, take_profit=None, trailling=None):
@@ -108,3 +114,16 @@ class Oanda(object):
                   "candleFormat": candleFormat}
         response = self.oanda.get_history(**params)
         return response["candles"]
+
+    def get_position(self, instrument):
+        params = {"instrument": instrument.upper(),
+                  "account_id": self.id}
+        try:
+            return self.oanda.get_position(**params)
+        except oandapy.OandaError as err:
+            if 'Position not found' in str(err):
+                return None
+            else:
+                raise err
+
+
