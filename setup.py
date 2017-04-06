@@ -1,17 +1,17 @@
-from distutils.core import setup
+from setuptools import setup, find_packages
 
 setup(
-    name="forex_toolbox",
+    name="toolbox",
 
     # Version number (initial):
-    version="0.1.0",
+    version="0.2.0",
 
     # Application author details:
     author="Keang Song",
     author_email="skeang@gmail.com",
 
     # Packages
-    packages=["forex_toolbox"],
+    packages=find_packages(exclude=['ez_setup', 'examples', 'tests']),
 
     # Include additional files into the package
     include_package_data=True,
