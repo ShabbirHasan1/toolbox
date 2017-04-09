@@ -4,7 +4,7 @@ setup(
     name="toolbox",
 
     # Version number (initial):
-    version="0.3.0",
+    version="0.3.1",
 
     # Application author details:
     author="Keang Song",
@@ -38,4 +38,5 @@ setup(
     dependency_links=[
         'git+git://github.com/oanda/oandapy@master#egg=oandapy'
     ],
+    include_package_data=True
 )
