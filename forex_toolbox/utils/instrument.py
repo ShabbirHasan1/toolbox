@@ -7,6 +7,7 @@ sid_sym_map = None
 sid_name_map = None
 ohlc_ratio = None
 inverse_ohlc_ratio = None
+inverse_ohlc_ratio_instrument = None
 
 
 def sid(symbol):
@@ -53,6 +54,12 @@ def float_multiplier(sid):
         load_instruments_info()
     return inverse_ohlc_ratio[sid]
 
+def float_multiplier_inst(instrument):
+    global inverse_ohlc_ratio_instrument
+    if inverse_ohlc_ratio_instrument is None:
+        load_instruments_info()
+    return inverse_ohlc_ratio_instrument[instrument]
+
 
 def load_instruments_info():
     global sym_sid_map
@@ -60,6 +67,7 @@ def load_instruments_info():
     global sid_name_map
     global ohlc_ratio
     global inverse_ohlc_ratio
+    global inverse_ohlc_ratio_instrument
     dir_path = os.path.dirname(os.path.realpath(__file__))
     with open('{}/../broker/oanda_instruments.json'.format(dir_path)) as data_file:
         instruments  = json.load(data_file)
@@ -68,3 +76,4 @@ def load_instruments_info():
         sid_name_map = {i['sid']: i['displayName'] for i in instruments}
         ohlc_ratio   = {i['instrument']: int(100 * 1 / float(i['pip'])) for i in instruments}
         inverse_ohlc_ratio = {i['sid']: float(i['pip'])/100.0 for i in instruments}
+        inverse_ohlc_ratio_instrument = {i['instrument']: float(i['pip'])/100.0 for i in instruments}
