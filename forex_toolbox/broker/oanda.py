@@ -71,7 +71,7 @@ class Oanda(object):
                 expiry_string = expiry.strftime("%Y-%m-%dT%H:%M:%S")
             params["expiry"] = expiry_string
 
-        precision = Oanda.PRECISION[instrument.symbol]
+        precision = Oanda.PRECISION[instrument_string]
         if lower_bound:
             params["lowerBound"] = precision % lower_bound
 
