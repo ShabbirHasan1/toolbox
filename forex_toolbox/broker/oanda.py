@@ -50,8 +50,13 @@ class Oanda(object):
             side = "buy"
             touch_price = lower_bound
 
+        instrument_string = ""
+        if type(instrument) is str:
+            instrument_string = instrument
+        else:
+            instrument_string = instrument.symbol
         params = {"account_id": self.id,
-                  "instrument": instrument.symbol,
+                  "instrument": instrument_string,
                   "units":      amount,
                   "side":       side,
                   "type":       order_type}
@@ -60,7 +65,10 @@ class Oanda(object):
             params["price"] = touch_price
 
         if expiry is not None:
-            expiry_string = expiry.strftime("%Y-%m-%dT%H:%M:%S")
+            if type(expiry) is str:
+                expiry_string = expiry
+            else:
+                expiry_string = expiry.strftime("%Y-%m-%dT%H:%M:%S")
             params["expiry"] = expiry_string
 
         precision = Oanda.PRECISION[instrument.symbol]
@@ -77,7 +85,7 @@ class Oanda(object):
             params["takeProfit"] = precision % take_profit
 
         if trailling:
-            params["traillingStop"] = trailling
+            params["trailingStop"] = trailling
 
         try:
             response = self.oanda.create_order(**params)

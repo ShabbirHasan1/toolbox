@@ -4,7 +4,7 @@ setup(
     name="toolbox",
 
     # Version number (initial):
-    version="0.3.1",
+    version="0.3.3",
 
     # Application author details:
     author="Keang Song",
