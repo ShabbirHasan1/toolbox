@@ -57,7 +57,7 @@ class Oanda(object):
             instrument_string = instrument.symbol
         params = {"account_id": self.id,
                   "instrument": instrument_string,
-                  "units":      amount,
+                  "units":      abs(amount),
                   "side":       side,
                   "type":       order_type}
 
@@ -90,10 +90,11 @@ class Oanda(object):
         try:
             response = self.oanda.create_order(**params)
             logging.info("#create_order params=%s response=%s" % (params, response))
+            return response["tradeOpened"]["id"]
         except oandapy.exceptions.OandaError as e:
             logging.exception(e)
+            return None
 
-        return response["tradeOpened"]["id"]
 
     def get_history(self, instrument, count=500, resolution="m1", end=None, candleFormat="midpoint"):
         params = {"instrument": instrument.upper(),
