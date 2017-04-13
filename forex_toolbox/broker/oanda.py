@@ -15,6 +15,7 @@ class Oanda(object):
     PRECISION = {'EUR_USD': '%.5f',
                  'USD_JPY': '%.3f',
                  'EUR_JPY': '%.3f',
+                 'AUD_USD': '%.5f',
                  'GBP_USD': '%.5f'}
 
     def __init__(self, id):
