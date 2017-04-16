@@ -96,6 +96,14 @@ class Oanda(object):
             logging.exception(e)
             return None
 
+    def close_position(self, instrument):
+        try:
+            response = self.oanda.close_position(self.id, instrument)
+            logging.info("#close_position params=%s response=%s" % (params, response))
+            return response
+        except oandapy.exceptions.OandaError as e:
+            logging.exception(e)
+            return None
 
     def get_history(self, instrument, count=500, resolution="m1", end=None, candleFormat="midpoint"):
         params = {"instrument": instrument.upper(),
