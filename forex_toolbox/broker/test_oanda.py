@@ -17,6 +17,30 @@ def asset(request):
                  asset_name="EUR_USD")
 
 
+def test_get_positions(broker):
+    response = {
+        "positions" : [
+            {
+                "instrument" : "EUR_USD",
+                "units" : 4741,
+                "side" : "buy",
+                "avgPrice" : 1.3626
+            },
+            {
+                "instrument" : "USD_CAD",
+                "units" : 30,
+                "side" : "sell",
+                "avgPrice" : 1.11563
+            }
+        ]
+    }
+
+    with requests_mock.mock() as m:
+        m.get("https://api-fxpractice.oanda.com/v1/accounts/{0}/positions".format(broker.id),
+               json=response)
+        positions = broker.get_positions(broker.id)
+        assert 'positions' in positions
+
 def order_response():
     return {"instrument": "EUR_USD",
             "time": "2013-12-06T20:36:06Z",

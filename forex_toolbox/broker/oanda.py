@@ -11,7 +11,7 @@ import oandapy
 import logging
 
 
-class Oanda(object):
+class Oanda(oandapy.oandapy.API):
     PRECISION = {'EUR_USD': '%.5f',
                  'USD_JPY': '%.3f',
                  'EUR_JPY': '%.3f',
@@ -20,6 +20,9 @@ class Oanda(object):
 
     def __init__(self, id):
         self.id = id
+        super(Oanda, self).__init__(environment=os.getenv("OANDA_ENV", "practice"),
+                                 access_token=os.getenv("OANDA_ACCESS_TOKEN", "xxx"))
+
         self.oanda = oandapy.API(environment=os.getenv("OANDA_ENV", "practice"),
                                  access_token=os.getenv("OANDA_ACCESS_TOKEN", "xxx"))
 
