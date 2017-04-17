@@ -99,7 +99,7 @@ class Oanda(object):
     def close_position(self, instrument):
         try:
             response = self.oanda.close_position(self.id, instrument)
-            logging.info("#close_position params=%s response=%s" % (params, response))
+            logging.info("#close_position params=%s response=%s" % ({'id': self.id, 'instrument': instrument}, response))
             return response
         except oandapy.exceptions.OandaError as e:
             logging.exception(e)
