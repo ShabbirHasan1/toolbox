@@ -93,7 +93,12 @@ class Oanda(oandapy.oandapy.API):
         try:
             response = self.oanda.create_order(**params)
             logging.info("#create_order params=%s response=%s" % (params, response))
-            return response["tradeOpened"]["id"]
+            if "tradeOpened" in response:
+                return response["tradeOpened"]["id"]
+            elif "orderOpened" in response:
+                return response["orderOpened"]["id"]
+            else:
+                return response
         except oandapy.exceptions.OandaError as e:
             logging.exception(e)
             return None
