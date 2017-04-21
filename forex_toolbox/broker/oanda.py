@@ -33,7 +33,7 @@ class Oanda(oandapy.oandapy.API):
         return response
 
     def create_order(self, instrument, amount, order_type='market',
-                     lower_bound=None, upper_bound=None, expiry=None,
+                     price=None, lower_bound=None, upper_bound=None, expiry=None,
                      stop_loss=None, take_profit=None, trailling=None):
         """
         Creates an order with Oanda rest api.
@@ -49,10 +49,8 @@ class Oanda(oandapy.oandapy.API):
 
         if amount < 0:
             side = "sell"
-            touch_price = upper_bound
         else:
             side = "buy"
-            touch_price = lower_bound
 
         instrument_string = ""
         if type(instrument) is str:
@@ -65,8 +63,6 @@ class Oanda(oandapy.oandapy.API):
                   "side":       side,
                   "type":       order_type}
 
-        if touch_price and order_type != 'market':
-            params["price"] = touch_price
 
         if expiry is not None:
             if type(expiry) is str:
@@ -76,6 +72,9 @@ class Oanda(oandapy.oandapy.API):
             params["expiry"] = expiry_string
 
         precision = Oanda.PRECISION[instrument_string]
+        if price and order_type != 'market':
+            params["price"] = precision % price
+
         if lower_bound:
             params["lowerBound"] = precision % lower_bound
 

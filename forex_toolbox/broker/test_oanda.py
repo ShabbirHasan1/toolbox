@@ -66,7 +66,7 @@ def test_create_order_sell_market(broker, asset):
         assert order_id == 175517237
 
         call = m.request_history
-        expected_params = ['instrument=EUR_USD', 'side=sell', 'type=market', 'units=-2']
+        expected_params = ['instrument=EUR_USD', 'side=sell', 'type=market', 'units=2']
         assert set(call[0].text.split("&")) == set(expected_params)
 
 
@@ -80,7 +80,21 @@ def test_create_order_sell_tp_sl(broker, asset):
 
         call = m.request_history
         expected_params = ['instrument=EUR_USD', 'side=sell',
-                           'type=market', 'units=-2',
-                           'traillingStop=10.5',
+                           'type=market', 'units=2',
+                           'trailingStop=10.5',
                            'takeProfit=2.34560', 'stopLoss=1.23450']
+        assert set(call[0].text.split("&")) == set(expected_params)
+
+def test_create_order_stop(broker, asset):
+    with requests_mock.mock() as m:
+        m.post("https://api-fxpractice.oanda.com/v1/accounts/{0}/orders".format(broker.id),
+               json=order_response())
+
+        order_id = broker.create_order(asset, -2, price=2.3456, order_type='stop')
+        assert order_id == 175517237
+
+        call = m.request_history
+        expected_params = ['instrument=EUR_USD', 'side=sell',
+                           'type=stop', 'units=2',
+                           'price=2.34560']
         assert set(call[0].text.split("&")) == set(expected_params)
